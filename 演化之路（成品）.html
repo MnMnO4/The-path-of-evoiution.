@@ -1,0 +1,1619 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>演化之路 · 完整版</title>
+    <style>
+        /* ===== 全局 ===== */
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+        :root {
+            --bg: #0b111e; --panel: #131d2e; --card: #1a2a40; --hover: #2a4060;
+            --text: #e8edf5; --dim: #8a9bb5; --dark: #4a5a7a;
+            --ok: #2ecc71; --ok-dim: rgba(46,204,113,.12);
+            --warn: #f1c40f; --bad: #e74c3c; --info: #3498db;
+            --sea: #1abc9c; --swamp: #2ecc71; --desert: #e67e22; --ice: #5dade2;
+            --mut: #9b59b6; --gold: #f1c40f;
+            --transition: all .25s cubic-bezier(.4,0,.2,1);
+        }
+        body {
+            font-family: 'Inter', 'Microsoft YaHei', system-ui, sans-serif;
+            background: var(--bg); color: var(--text);
+            min-height: 100vh; overflow: hidden; touch-action: none;
+            font-size: 14px; line-height: 1.5;
+        }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: var(--panel); }
+        ::-webkit-scrollbar-thumb { background: var(--dark); border-radius: 4px; }
+
+        /* ===== 菜单 ===== */
+        #menu {
+            position: fixed; inset: 0;
+            background: radial-gradient(ellipse at 60% 30%, #0f1a2e, #060a14);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 300; text-align: center; padding: 1rem; overflow-y: auto; gap: .5rem;
+        }
+        #menu h1 { font-size: 2.4rem; font-weight: 800; background: linear-gradient(135deg,var(--ok),var(--sea),var(--mut)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        #menu .sub { color: var(--dim); font-size: .85rem; }
+        .name-input { width:100%; max-width:300px; padding:.5rem .8rem; border:1.5px solid var(--card); border-radius:8px; background:var(--panel); color:var(--text); font-size:.9rem; text-align:center; transition:var(--transition); }
+        .name-input:focus { outline:none; border-color:var(--ok); box-shadow:0 0 0 3px var(--ok-dim); }
+        .route-label { color:var(--dim); font-size:.7rem; font-weight:600; margin-top:.2rem; }
+        .route-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:.4rem; width:100%; max-width:560px; }
+        .route-item { padding:.4rem .2rem; border:2px solid var(--card); border-radius:8px; background:var(--panel); color:var(--text); cursor:pointer; text-align:center; transition:var(--transition); font-size:.6rem; touch-action:manipulation; }
+        .route-item:hover { border-color:var(--mut); transform:translateY(-2px); background:rgba(155,89,182,.06); }
+        .route-item.selected { border-color:var(--mut); background:rgba(155,89,182,.12); box-shadow:0 0 20px rgba(155,89,182,.15); }
+        .route-item .icon { font-size:1.2rem; display:block; }
+        .route-item .rname { font-weight:700; font-size:.65rem; }
+        .route-item .rdesc { font-size:.45rem; color:var(--dim); }
+        .diff-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:.4rem; width:100%; max-width:480px; }
+        .diff-item { padding:.4rem .3rem; border:2px solid var(--card); border-radius:8px; background:var(--panel); color:var(--text); cursor:pointer; text-align:center; transition:var(--transition); touch-action:manipulation; }
+        .diff-item:hover { border-color:var(--ok); transform:translateY(-2px); }
+        .diff-item.selected { border-color:var(--ok); background:var(--ok-dim); }
+        .diff-item .n { font-weight:700; font-size:.75rem; }
+        .diff-item .d { font-size:.5rem; color:var(--dim); }
+        .diff-item .s { font-size:.45rem; color:var(--dark); }
+        .start-btn { width:100%; max-width:380px; padding:.6rem; border:none; border-radius:10px; background:linear-gradient(135deg,var(--ok),#27ae60); color:#fff; font-size:.9rem; font-weight:700; cursor:pointer; transition:var(--transition); box-shadow:0 4px 16px rgba(46,204,113,.25); touch-action:manipulation; }
+        .start-btn:hover { transform:translateY(-2px); box-shadow:0 8px 30px rgba(46,204,113,.35); }
+        .menu-row { display:flex; gap:.4rem; flex-wrap:wrap; justify-content:center; }
+        .menu-row button { padding:.3rem .8rem; border:1px solid var(--dark); border-radius:6px; background:transparent; color:var(--dim); cursor:pointer; font-size:.7rem; transition:var(--transition); touch-action:manipulation; }
+        .menu-row button:hover { border-color:var(--info); color:var(--info); }
+        .menu-row .load-btn { border-color:var(--ok); color:var(--ok); }
+        .menu-row .load-btn:hover { background:var(--ok-dim); }
+
+        /* ===== 顶部栏 ===== */
+        .topbar {
+            position:fixed; top:0; left:0; right:0; height:44px;
+            background:rgba(19,29,46,.92); backdrop-filter:blur(8px);
+            border-bottom:1px solid rgba(255,255,255,.04);
+            display:flex; align-items:center; justify-content:space-between;
+            padding:0 .5rem; z-index:60; font-size:.6rem; gap:4px;
+        }
+        .topbar .era { background:linear-gradient(135deg,var(--ok),var(--sea)); color:#000; padding:.1rem .5rem; border-radius:12px; font-weight:700; white-space:nowrap; }
+        .topbar .turn { color:var(--dim); white-space:nowrap; }
+        .topbar .env-group { display:flex; align-items:center; gap:.2rem; flex:1; justify-content:center; overflow-x:auto; }
+        .topbar .env-badge { padding:.05rem .35rem; border-radius:10px; font-size:.5rem; font-weight:600; white-space:nowrap; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.04); }
+        .topbar .env-badge.temp-hot { border-color:rgba(231,76,60,.4); color:var(--bad); }
+        .topbar .env-badge.temp-cold { border-color:rgba(93,173,226,.4); color:var(--ice); }
+        .topbar .env-badge.temp-mid { border-color:rgba(241,196,15,.3); color:var(--warn); }
+        .topbar .save-btn { background:var(--ok-dim); border:1px solid rgba(46,204,113,.2); color:var(--ok); padding:.05rem .5rem; border-radius:12px; cursor:pointer; font-size:.55rem; font-weight:600; transition:var(--transition); white-space:nowrap; touch-action:manipulation; }
+        .topbar .save-btn:hover { background:rgba(46,204,113,.2); }
+
+        /* ===== 主区域 ===== */
+        .main { position:fixed; top:44px; bottom:52px; left:0; right:0; overflow:hidden; background:var(--bg); }
+        #map-container { width:100%; height:100%; position:relative; cursor:grab; }
+        #map-container:active { cursor:grabbing; }
+        #map-container canvas { display:block; width:100%; height:100%; touch-action:none; }
+        .zoom-hint { position:absolute; bottom:8px; right:10px; color:var(--dark); font-size:.45rem; background:rgba(0,0,0,.5); padding:2px 8px; border-radius:6px; pointer-events:none; z-index:5; backdrop-filter:blur(4px); }
+        .migrate-hint { position:absolute; bottom:40px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,.75); color:var(--warn); padding:4px 14px; border-radius:20px; font-size:.6rem; border:1px solid rgba(241,196,15,.2); pointer-events:none; z-index:10; white-space:nowrap; opacity:0; transition:opacity .3s; backdrop-filter:blur(4px); }
+        .migrate-hint.show { opacity:1; }
+        .mass-extinct-banner { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(231,76,60,.85); color:#fff; padding:8px 20px; border-radius:12px; font-size:1rem; font-weight:900; z-index:20; pointer-events:none; text-shadow:0 2px 8px rgba(0,0,0,.6); animation:fadeBanner 4s ease forwards; border:2px solid rgba(255,255,255,.15); text-align:center; }
+        .mass-extinct-banner .sub { font-size:.6rem; font-weight:400; opacity:.8; }
+        @keyframes fadeBanner {
+            0% { opacity:0; transform:translate(-50%,-50%) scale(.8); }
+            15% { opacity:1; transform:translate(-50%,-50%) scale(1); }
+            85% { opacity:1; transform:translate(-50%,-50%) scale(1); }
+            100% { opacity:0; transform:translate(-50%,-50%) scale(1.1); }
+        }
+
+        /* ===== 底部导航 ===== */
+        .bottom-nav {
+            position:fixed; bottom:0; left:0; right:0; height:52px;
+            background:rgba(19,29,46,.92); backdrop-filter:blur(8px);
+            border-top:1px solid rgba(255,255,255,.04);
+            display:flex; z-index:60;
+        }
+        .nav-btn {
+            flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+            background:none; border:none; color:var(--dark); cursor:pointer;
+            transition:var(--transition); font-size:.5rem; padding:2px 0; position:relative;
+            touch-action:manipulation;
+        }
+        .nav-btn .icon { font-size:1.15rem; line-height:1.2; }
+        .nav-btn .label { font-size:.45rem; opacity:.7; }
+        .nav-btn.active { color:var(--ok); }
+        .nav-btn.active::after { content:''; position:absolute; top:0; left:20%; right:20%; height:2px; background:var(--ok); border-radius:0 0 4px 4px; }
+        .nav-btn:hover { color:var(--text); }
+
+        /* ===== 抽屉 ===== */
+        .drawer {
+            position:fixed; left:0; right:0; bottom:52px; max-height:60vh;
+            background:rgba(19,29,46,.96); backdrop-filter:blur(12px);
+            border-top:1px solid rgba(255,255,255,.04); border-radius:16px 16px 0 0;
+            padding:.4rem .5rem .5rem; overflow-y:auto; z-index:55;
+            transform:translateY(100%); transition:transform .35s cubic-bezier(.4,0,.2,1);
+            box-shadow:0 -8px 40px rgba(0,0,0,.7);
+            display:flex; flex-direction:column; gap:.2rem;
+        }
+        .drawer.open { transform:translateY(0); }
+        .drawer .close-btn { align-self:flex-end; background:none; border:none; color:var(--dim); font-size:1.2rem; cursor:pointer; padding:0 .2rem; line-height:1; transition:var(--transition); touch-action:manipulation; }
+        .drawer .close-btn:hover { color:var(--text); }
+        .drawer .tab-buttons { display:flex; gap:2px; border-bottom:1px solid rgba(255,255,255,.04); padding-bottom:.1rem; flex-shrink:0; }
+        .drawer .tab-btn { flex:1; padding:.2rem 0; background:transparent; border:none; color:var(--dark); font-weight:600; font-size:.6rem; cursor:pointer; border-radius:6px 6px 0 0; transition:var(--transition); touch-action:manipulation; }
+        .drawer .tab-btn:hover { color:var(--text); background:rgba(255,255,255,.04); }
+        .drawer .tab-btn.active { color:var(--ok); background:var(--ok-dim); border-bottom:2px solid var(--ok); }
+        .drawer .tab-content { flex:1; overflow:hidden; display:flex; flex-direction:column; min-height:0; }
+        .drawer .tab-pane { display:none; flex-direction:column; gap:.2rem; overflow-y:auto; padding-top:.1rem; flex:1; }
+        .drawer .tab-pane.active { display:flex; }
+
+        /* ===== 状态面板 ===== */
+        .stat-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:.25rem; }
+        .stat-box { background:var(--card); border-radius:8px; padding:.2rem .15rem; text-align:center; border:1px solid rgba(255,255,255,.03); }
+        .stat-box h4 { font-size:.45rem; color:var(--dark); text-transform:uppercase; letter-spacing:.06em; margin-bottom:0; }
+        .stat-box .num { font-size:1rem; font-weight:800; }
+        .stat-box .num.pop { color:var(--ok); }
+        .stat-box .num.gp { color:var(--warn); }
+        .stat-box .num.route { color:var(--mut); }
+        .warn-box { font-size:.55rem; color:var(--bad); background:rgba(231,76,60,.08); border:1px solid rgba(231,76,60,.15); border-radius:6px; padding:.15rem .3rem; display:none; }
+        .warn-box.show { display:block; }
+        .adapt-section { background:var(--card); border-radius:8px; padding:.2rem .3rem; border:1px solid rgba(255,255,255,.03); }
+        .adapt-section h4 { font-size:.5rem; color:var(--dark); margin-bottom:.05rem; }
+        .adapt-bar { height:5px; background:var(--hover); border-radius:4px; overflow:hidden; }
+        .adapt-bar>div { height:100%; border-radius:4px; transition:width .5s ease; }
+        .adapt-bar .good { background:linear-gradient(90deg,var(--ok),#58d68d); }
+        .adapt-bar .mid { background:linear-gradient(90deg,var(--warn),#f7dc6f); }
+        .adapt-bar .bad { background:linear-gradient(90deg,var(--bad),#f1948a); }
+        .adapt-info { display:flex; justify-content:space-between; font-size:.5rem; margin-top:.05rem; }
+        .adapt-info .score { font-weight:700; }
+
+        /* ===== 地块信息（新增） ===== */
+        .cell-info-section {
+            background:var(--card); border-radius:8px; padding:.2rem .3rem;
+            border:1px solid rgba(255,255,255,.03); font-size:.5rem;
+        }
+        .cell-info-section h4 { font-size:.5rem; color:var(--dark); margin-bottom:.05rem; }
+        .cell-info-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:.1rem .2rem; }
+        .cell-info-grid .ci-item { display:flex; justify-content:space-between; padding:.02rem 0; border-bottom:1px solid rgba(255,255,255,.03); }
+        .cell-info-grid .ci-item .ci-label { color:var(--dim); }
+        .cell-info-grid .ci-item .ci-value { color:var(--text); font-weight:600; }
+        .cell-info-grid .ci-item .ci-value.terrain-tag { padding:0 4px; border-radius:3px; font-size:.45rem; }
+        .cell-info-grid .ci-item .ci-value.sea { background:rgba(26,188,156,.15); color:var(--sea); }
+        .cell-info-grid .ci-item .ci-value.swamp { background:rgba(46,204,113,.15); color:var(--swamp); }
+        .cell-info-grid .ci-item .ci-value.desert { background:rgba(230,126,34,.15); color:var(--desert); }
+        .cell-info-grid .ci-item .ci-value.ice { background:rgba(93,173,226,.15); color:var(--ice); }
+        .cell-info-grid .ci-item .ci-value.plain { background:rgba(241,196,15,.1); color:var(--warn); }
+
+        .owned-section { background:var(--card); border-radius:8px; padding:.2rem .3rem; border:1px solid rgba(255,255,255,.03); max-height:80px; overflow-y:auto; }
+        .owned-section h4 { font-size:.5rem; color:var(--dark); margin-bottom:.05rem; }
+        .sys-group { margin-bottom:.05rem; }
+        .sys-group .sys-name { font-size:.45rem; color:var(--dim); }
+        .sys-group .sys-tags { display:flex; flex-wrap:wrap; gap:.1rem; }
+        .sys-group .tag { padding:.03rem .25rem; background:var(--panel); border:1px solid var(--hover); border-radius:4px; font-size:.5rem; cursor:pointer; transition:var(--transition); touch-action:manipulation; }
+        .sys-group .tag.active { border-color:var(--ok); color:var(--ok); }
+        .sys-group .tag.route-locked { border-color:var(--mut); color:var(--mut); opacity:.6; }
+        .sys-group .tag:hover { background:rgba(155,89,182,.12); border-color:var(--mut); color:var(--mut); }
+        .sys-group .tag.empty { color:var(--dark); border-style:dashed; cursor:default; }
+
+        .achieve-section { background:var(--card); border-radius:8px; padding:.2rem .3rem; border:1px solid rgba(255,255,255,.03); max-height:110px; overflow-y:auto; }
+        .achieve-section h4 { font-size:.5rem; color:var(--dark); display:flex; align-items:center; gap:.3rem; flex-wrap:wrap; }
+        .achieve-section h4 .ach-count { font-size:.4rem; color:var(--dim); font-weight:400; }
+        .achieve-grid { display:grid; grid-template-columns:1fr 1fr; gap:.1rem; }
+        .achieve-item { display:flex; align-items:center; gap:.15rem; padding:.05rem .15rem; background:var(--panel); border-radius:4px; font-size:.45rem; border-left:3px solid var(--dark); transition:var(--transition); min-height:20px; }
+        .achieve-item .icon { font-size:.55rem; flex-shrink:0; }
+        .achieve-item .info { flex:1; min-width:0; line-height:1.2; }
+        .achieve-item .info .name { font-weight:600; color:var(--text); font-size:.45rem; }
+        .achieve-item .info .desc { color:var(--dim); font-size:.4rem; }
+        .achieve-item .tier-badge { font-size:.4rem; font-weight:700; padding:.02rem .1rem; border-radius:2px; flex-shrink:0; }
+        .achieve-item.unlocked { border-left-color:var(--ok); background:var(--ok-dim); }
+        .achieve-item.unlocked .tier-badge { color:var(--ok); }
+        .achieve-item.locked { opacity:.5; }
+        .achieve-item.locked .tier-badge { color:var(--dark); }
+        .tier-bronze { color:#cd7f32 !important; }
+        .tier-silver { color:#bdc3c7 !important; }
+        .tier-gold { color:#f1c40f !important; }
+        .tier-platinum { color:#ecf0f1 !important; }
+
+        /* ===== 进化树 ===== */
+        .tree-container { display:flex; flex-direction:column; gap:2px; padding:4px 0; position:relative; }
+        .tree-node { display:flex; flex-direction:column; position:relative; padding-left:28px; }
+        .tree-node::before { content:''; position:absolute; left:10px; top:0; bottom:0; width:2px; background:rgba(74,90,122,0.3); }
+        .tree-node::after { content:''; position:absolute; left:10px; top:50%; width:16px; height:2px; background:rgba(74,90,122,0.3); }
+        .tree-root > .tree-node::before, .tree-root > .tree-node::after { display:none; }
+        .tree-node:last-child::before { bottom:50%; }
+        .tree-node.leaf::after { display:none; }
+        .tree-node.exclusive::before, .tree-node.exclusive::after { background:rgba(231,76,60,0.5) !important; border:1px dashed rgba(231,76,60,0.3); }
+
+        .tree-node .trait-card {
+            position:relative; margin:1px 0; min-width:120px; max-width:280px; flex:0 0 auto;
+            background:var(--panel); border:2px solid var(--hover); border-radius:6px;
+            padding:4px 8px; cursor:pointer; transition:var(--transition);
+            font-size:0.5rem; touch-action:manipulation;
+        }
+        .tree-node .trait-card .name { font-weight:700; font-size:0.55rem; display:flex; align-items:center; gap:4px; }
+        .tree-node .trait-card .cost { font-size:0.45rem; color:var(--warn); font-weight:600; }
+        .tree-node .trait-card .envs { font-size:0.4rem; display:flex; flex-wrap:wrap; gap:2px; margin-top:2px; }
+        .tree-node .trait-card .envs span { padding:0 4px; border-radius:3px; font-size:0.35rem; }
+        .tree-node .trait-card .envs .sea { background:rgba(26,188,156,.15); color:var(--sea); }
+        .tree-node .trait-card .envs .swamp { background:rgba(46,204,113,.15); color:var(--swamp); }
+        .tree-node .trait-card .envs .desert { background:rgba(230,126,34,.15); color:var(--desert); }
+        .tree-node .trait-card .envs .ice { background:rgba(93,173,226,.15); color:var(--ice); }
+        .tree-node .trait-card .envs .bad { background:rgba(231,76,60,.15); color:var(--bad); }
+        .tree-node .trait-card .req { font-size:0.4rem; color:var(--dark); margin-top:2px; }
+        .tree-node .trait-card .preview { font-size:0.4rem; color:var(--ok); font-weight:600; display:none; margin-top:2px; }
+        .tree-node .trait-card:hover .preview { display:block; }
+        .tree-node .trait-card .degen-tag { position:absolute; top:2px; right:4px; font-size:0.35rem; color:var(--mut); background:rgba(155,89,182,0.15); padding:0 6px; border-radius:3px; display:none; }
+        .tree-node .trait-card.owned:hover .degen-tag { display:block; }
+        .tree-node .trait-card.owned { border-color:var(--ok); background:var(--ok-dim); box-shadow:0 0 12px rgba(46,204,113,0.15); }
+        .tree-node .trait-card.owned:hover { border-color:var(--mut); background:rgba(155,89,182,0.08); }
+        .tree-node .trait-card.locked { opacity:0.45; cursor:not-allowed; border-color:var(--dark); background:rgba(255,255,255,0.02); }
+        .tree-node .trait-card.affordable { border-color:var(--warn); animation:pulse-border 1.8s ease-in-out infinite; }
+        @keyframes pulse-border { 0%,100% { box-shadow:0 0 6px rgba(241,196,15,0.2); } 50% { box-shadow:0 0 18px rgba(241,196,15,0.5); } }
+        .tree-node .trait-card.route-locked { opacity:0.5 !important; border-color:var(--dark) !important; background:rgba(255,255,255,0.02) !important; cursor:not-allowed !important; position:relative; overflow:hidden; }
+        .tree-node .trait-card.route-locked .lock-overlay { position:absolute; inset:0; background:repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(231,76,60,0.08) 4px, rgba(231,76,60,0.08) 8px); pointer-events:none; border-radius:4px; }
+        .tree-node .trait-card.route-locked .lock-label { position:absolute; bottom:2px; right:4px; font-size:0.4rem; color:var(--bad); background:rgba(0,0,0,0.6); padding:0 6px; border-radius:2px; font-weight:700; }
+        .tree-node .trait-card.ultimate { border-color:var(--gold); background:linear-gradient(135deg, rgba(241,196,15,0.08), rgba(241,196,15,0.02)); box-shadow:0 0 20px rgba(241,196,15,0.2); }
+        .tree-node .trait-card.ultimate .name { color:var(--gold); }
+        .tree-node .trait-card.ultimate.owned { border-color:var(--gold); background:linear-gradient(135deg, rgba(241,196,15,0.2), rgba(46,204,113,0.08)); box-shadow:0 0 30px rgba(241,196,15,0.4); }
+        .tree-node .trait-card.highlight-req { border-color:var(--info) !important; box-shadow:0 0 16px rgba(52,152,219,0.5); }
+        .tree-node .trait-card.highlight-req .name { color:var(--info); }
+        .tree-node .trait-card .exc-label { font-size:0.4rem; color:var(--bad); background:rgba(231,76,60,0.1); border:1px solid rgba(231,76,60,0.2); border-radius:3px; padding:0 4px; margin-top:2px; display:inline-block; }
+
+        .tree-depth-0 { padding-left:0; }
+        .tree-depth-1 { padding-left:28px; }
+        .tree-depth-2 { padding-left:56px; }
+        .tree-depth-3 { padding-left:84px; }
+        .tree-depth-4 { padding-left:112px; }
+
+        .tree-group-title { font-size:0.65rem; font-weight:700; color:var(--text); padding:6px 0 2px 0; border-bottom:1px solid rgba(255,255,255,0.05); margin-top:6px; display:flex; align-items:center; gap:6px; }
+        .tree-group-title .note { font-size:0.45rem; color:var(--dark); font-weight:400; }
+        .tree-group-title .branch-badge { font-size:0.4rem; background:rgba(241,196,15,0.1); border:1px solid var(--warn); border-radius:10px; padding:0 6px; color:var(--warn); }
+
+        /* ===== 全屏进化视图 ===== */
+        #btn-evolve-fullscreen {
+            position:fixed; bottom:66px; right:16px; z-index:50;
+            background:var(--mut); border:none; border-radius:50%;
+            width:48px; height:48px; font-size:1.4rem; color:#fff;
+            cursor:pointer; box-shadow:0 4px 20px rgba(155,89,182,0.4);
+            transition:var(--transition); touch-action:manipulation;
+            display:none; align-items:center; justify-content:center;
+        }
+        #btn-evolve-fullscreen:hover { transform:scale(1.08); box-shadow:0 6px 30px rgba(155,89,182,0.6); }
+
+        #evolve-fullscreen-overlay {
+            position:fixed; inset:0; background:rgba(11,17,30,0.96); backdrop-filter:blur(12px);
+            z-index:200; display:none; flex-direction:column;
+            padding:12px 16px 20px; overflow-y:auto;
+        }
+        #evolve-fullscreen-overlay.open { display:flex; }
+        #evolve-fullscreen-overlay .header { display:flex; justify-content:space-between; align-items:center; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.06); flex-shrink:0; }
+        #evolve-fullscreen-overlay .header h2 { font-size:1.1rem; font-weight:700; color:var(--text); }
+        #evolve-fullscreen-overlay .header h2 span { color:var(--dim); font-weight:400; font-size:0.7rem; }
+        #evolve-fullscreen-overlay .close-btn { background:none; border:none; color:var(--dim); font-size:1.6rem; cursor:pointer; padding:4px 12px; transition:var(--transition); touch-action:manipulation; }
+        #evolve-fullscreen-overlay .close-btn:hover { color:var(--text); }
+        #evolve-fullscreen-overlay .body { flex:1; overflow-y:auto; padding-top:8px; }
+
+        /* ===== 日志 ===== */
+        .log-list { background:var(--card); border-radius:8px; padding:.2rem .3rem; max-height:150px; overflow-y:auto; font-size:.55rem; border:1px solid rgba(255,255,255,.03); }
+        .log-item { padding:.1rem 0; border-bottom:1px solid rgba(255,255,255,.03); color:var(--dim); line-height:1.3; }
+        .log-item:last-child { border:none; }
+        .log-item.good { color:var(--ok); }
+        .log-item.warn { color:var(--warn); }
+        .log-item.bad { color:var(--bad); }
+        .log-item.info { color:var(--info); }
+        .log-item.mut { color:var(--mut); }
+        .log-item .turn-num { color:var(--dark); font-size:.45rem; margin-right:.1rem; }
+
+        /* ===== 按钮 ===== */
+        .next-btn { width:100%; padding:.35rem; border:none; border-radius:8px; background:linear-gradient(135deg,var(--ok),#27ae60); color:#fff; font-size:.7rem; font-weight:700; cursor:pointer; transition:var(--transition); flex-shrink:0; touch-action:manipulation; }
+        .next-btn:hover { transform:translateY(-1px); box-shadow:0 4px 16px rgba(46,204,113,.3); }
+        .next-btn:active { transform:scale(.98); }
+
+        /* ===== 弹窗 ===== */
+        .modal { position:fixed; inset:0; background:rgba(0,0,0,.8); backdrop-filter:blur(6px); display:none; align-items:center; justify-content:center; z-index:100; padding:1rem; }
+        .modal.show { display:flex; }
+        .modal-box { background:var(--panel); border:1px solid rgba(255,255,255,.06); border-radius:14px; padding:.8rem 1rem; max-width:420px; width:100%; text-align:center; box-shadow:0 8px 48px rgba(0,0,0,.6); }
+        .modal-box .icon { font-size:1.8rem; margin-bottom:.1rem; }
+        .modal-box h3 { font-size:.85rem; margin-bottom:.1rem; }
+        .modal-box p { color:var(--dim); line-height:1.5; font-size:.7rem; margin-bottom:.4rem; }
+        .modal-box button { padding:.35rem .9rem; border:none; border-radius:8px; background:var(--ok); color:#000; font-weight:700; cursor:pointer; font-size:.7rem; transition:var(--transition); touch-action:manipulation; }
+        .modal-box button:hover { transform:scale(1.02); }
+        .modal-box .btn-row { display:flex; gap:.3rem; justify-content:center; }
+        .modal-box .btn-row button { flex:1; }
+        .modal-box .btn-mut { background:var(--mut); color:#fff; }
+        .modal-box .btn-danger { background:var(--bad); color:#fff; }
+        .modal-box input { width:70px; padding:.2rem; border:1px solid var(--card); border-radius:6px; background:var(--bg); color:var(--text); text-align:center; font-size:.75rem; margin:.2rem 0; }
+        .modal-box input:focus { outline:none; border-color:var(--ok); }
+
+        /* ===== 成就 Toast ===== */
+        .achieve-toast {
+            position:fixed; bottom:66px; left:50%; transform:translateX(-50%) translateY(20px);
+            background:rgba(11,17,30,.95); border:1px solid var(--gold); border-radius:12px;
+            padding:.4rem .8rem; z-index:150; opacity:0;
+            transition:all .5s cubic-bezier(.4,0,.2,1); pointer-events:none;
+            text-align:center; max-width:85%; backdrop-filter:blur(12px);
+            box-shadow:0 8px 40px rgba(0,0,0,.7);
+        }
+        .achieve-toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+        .achieve-toast .ach-tier { font-size:.5rem; font-weight:700; }
+        .achieve-toast .ach-name { font-weight:700; color:var(--gold); font-size:.7rem; }
+        .achieve-toast .ach-desc { color:var(--dim); font-size:.5rem; }
+
+        /* ===== 结束画面 ===== */
+        #end-screen {
+            position:fixed; inset:0; background:var(--bg);
+            display:none; flex-direction:column; align-items:center; justify-content:center;
+            z-index:200; text-align:center; padding:1.2rem; overflow-y:auto;
+            pointer-events:auto;
+        }
+        #end-screen .big-icon { font-size:2.8rem; margin-bottom:.1rem; }
+        #end-screen h2 { font-size:1.4rem; font-weight:900; margin-bottom:.1rem; }
+        #end-screen h2.win { background:linear-gradient(135deg,var(--ok),var(--sea)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+        #end-screen h2.lose { color:var(--bad); }
+        #end-screen .stats { display:flex; gap:.6rem; margin:.3rem 0; flex-wrap:wrap; justify-content:center; }
+        #end-screen .stat-item { text-align:center; background:var(--card); padding:.2rem .5rem; border-radius:8px; min-width:60px; }
+        #end-screen .stat-item .n { font-size:1rem; font-weight:900; color:var(--ok); }
+        #end-screen .stat-item .l { font-size:.5rem; color:var(--dark); }
+        #end-screen .stars { font-size:.7rem; margin:.2rem 0; color:var(--warn); line-height:1.5; }
+        #end-screen .achieve-list { text-align:left; max-width:420px; width:100%; margin:.2rem 0; font-size:.55rem; color:var(--dim); max-height:180px; overflow-y:auto; padding:.1rem .2rem; background:rgba(0,0,0,.3); border-radius:8px; }
+        #end-screen .achieve-list .ach { padding:.1rem 0; border-bottom:1px solid rgba(255,255,255,.03); display:flex; align-items:center; gap:.2rem; }
+        #end-screen .achieve-list .ach.done { color:var(--ok); }
+        #end-screen .achieve-list .ach.locked { color:var(--dark); }
+        #end-screen .achieve-list .ach .atier { font-size:.5rem; font-weight:700; flex-shrink:0; min-width:18px; }
+        #end-screen .restart { padding:.6rem 2rem; border:none; border-radius:10px; background:linear-gradient(135deg,var(--ok),#27ae60); color:#fff; font-size:.9rem; font-weight:700; cursor:pointer; margin-top:.3rem; transition:var(--transition); touch-action:manipulation; min-height:48px; min-width:140px; box-shadow:0 4px 16px rgba(46,204,113,.3); z-index:10; position:relative; }
+        #end-screen .restart:hover { transform:translateY(-2px); box-shadow:0 8px 30px rgba(46,204,113,.4); }
+        #end-screen .restart:active { transform:scale(.96); }
+        #end-screen .ach-summary { font-size:.6rem; color:var(--dim); margin-bottom:.1rem; }
+
+        @media (max-width:520px) {
+            .tree-node .trait-card { min-width:80px; max-width:200px; font-size:0.45rem; padding:3px 6px; }
+            .tree-node .trait-card .name { font-size:0.5rem; }
+            .tree-depth-1 { padding-left:20px; }
+            .tree-depth-2 { padding-left:40px; }
+            .tree-depth-3 { padding-left:60px; }
+            .tree-depth-4 { padding-left:80px; }
+            #btn-evolve-fullscreen { width:40px; height:40px; font-size:1.1rem; bottom:58px; right:10px; }
+        }
+        @media (pointer:coarse) {
+            button, .nav-btn, .trait-card, .route-item, .diff-item, .sys-group .tag, .start-btn, .next-btn, .restart, .close-btn { min-height:44px; min-width:44px; }
+            .nav-btn .icon { font-size:1.3rem; }
+            .trait-card { min-height:40px; padding:.15rem .2rem; }
+            .route-item { min-height:50px; }
+            .diff-item { min-height:50px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ===== 菜单 ===== -->
+<div id="menu">
+    <h1>🧬 演化之路</h1>
+    <div class="sub">迁徙损耗 · 终极性状 · 树状进化</div>
+    <input class="name-input" id="species-name" placeholder="给你的物种起个名字..." value="原始生命">
+    <div class="route-label">🌿 选择生态位路线（决定演化方向）</div>
+    <div class="route-grid" id="route-grid">
+        <div class="route-item" data-route="titan"><span class="icon">🦖</span><span class="rname">泰坦巨兽</span><span class="rdesc">陆地物理霸主</span></div>
+        <div class="route-item" data-route="swarm"><span class="icon">🐜</span><span class="rname">虫群天灾</span><span class="rdesc">数量碾压一切</span></div>
+        <div class="route-item" data-route="abyss"><span class="icon">🐙</span><span class="rname">深渊利维坦</span><span class="rdesc">深海绝对统治</span></div>
+        <div class="route-item" data-route="sky"><span class="icon">🦅</span><span class="rname">天空主宰</span><span class="rdesc">空中机动霸权</span></div>
+        <div class="route-item" data-route="plague"><span class="icon">🦠</span><span class="rname">瘟疫化身</span><span class="rdesc">寄生操控者</span></div>
+        <div class="route-item" data-route="reef"><span class="icon">🪸</span><span class="rname">盖亚礁体</span><span class="rdesc">固着改造者</span></div>
+        <div class="route-item" data-route="sage"><span class="icon">🧠</span><span class="rname">智人文明</span><span class="rdesc">智慧传承</span></div>
+        <div class="route-item" data-route="ghost"><span class="icon">👻</span><span class="rname">幽灵幻象</span><span class="rdesc">隐蔽生存大师</span></div>
+    </div>
+    <div class="diff-grid" id="diff-grid">
+        <div class="diff-item" data-diff="1"><div class="n">🌱 简单</div><div class="d">熟悉机制</div><div class="s">倍率0.07 · 35GP/12种群</div></div>
+        <div class="diff-item" data-diff="2"><div class="n">🌿 普通</div><div class="d">均衡体验</div><div class="s">倍率0.05 · 25GP/9种群</div></div>
+        <div class="diff-item" data-diff="3"><div class="n">🔥 困难</div><div class="d">精打细算</div><div class="s">倍率0.035 · 18GP/6种群</div></div>
+        <div class="diff-item" data-diff="4"><div class="n">💀 地狱</div><div class="d">一步不能错</div><div class="s">倍率0.025 · 12GP/4种群</div></div>
+    </div>
+    <button class="start-btn" id="btn-start">🚀 开始演化</button>
+    <div class="menu-row">
+        <button id="btn-rules">📖 规则</button>
+        <button class="load-btn" id="btn-load">💾 读取存档</button>
+    </div>
+</div>
+
+<!-- ===== 规则弹窗 ===== -->
+<div class="modal" id="rules-modal">
+    <div class="modal-box" style="text-align:left;max-width:520px">
+        <h3 style="text-align:center;margin-bottom:0.3rem;color:var(--ok)">📖 游戏规则</h3>
+        <p><b>🧬 核心：</b>种群（全地图总和）与基因点（GP）</p>
+        <p><b>🗺️ 地图：</b>六边形网格，环面世界 · 拖拽平移 · 滚轮缩放</p>
+        <p><b>🌡️ 适应度：</b>每格独立计算，受地形、性状、环境温度、氧含量影响</p>
+        <p><b>🚀 迁徙损耗：</b>迁徙会损失部分个体（基础30%），可通过性状减免</p>
+        <p><b>🔄 自动扩散：</b>高适应性物种每回合有概率向邻格自发扩散</p>
+        <p><b>💥 大灭绝：</b>区域性+全局性事件，改变环境格局</p>
+        <p><b>♻️ 退化：</b>点击已拥有性状可退化，返还50%GP</p>
+        <p><b>🧬 生态位路线：</b>开局选择一条路线，锁定演化方向</p>
+        <p><b>🏆 成就系统：</b>32个成就，包含路线专属、大灭绝幸存</p>
+        <p><b>⚖️ 数值平衡：</b>基因收入、种群增长、适应度已重新校准</p>
+        <button id="btn-hide-rules" style="width:100%;margin-top:0.3rem">✅ 明白了</button>
+    </div>
+</div>
+
+<!-- ===== 顶部栏 ===== -->
+<div class="topbar" id="topbar" style="display:none">
+    <div style="display:flex;align-items:center;gap:.2rem;flex-shrink:0">
+        <div class="era" id="era-tag">寒武纪</div>
+        <div class="turn">第 <span id="turn-num">1</span>/<span id="total-turns">100</span></div>
+    </div>
+    <div class="env-group" id="env-group">
+        <span class="env-badge" id="env-temp">🌡️ 15°C</span>
+        <span class="env-badge" id="env-o2">💨 O₂ 21%</span>
+        <span class="env-badge" id="env-sea-level">🌊 0m</span>
+        <span class="env-badge" id="env-extinct" style="display:none;color:var(--bad);font-weight:700">💀 大灭绝</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:.2rem;flex-shrink:0">
+        <button class="save-btn" id="btn-save">💾 存档</button>
+    </div>
+</div>
+
+<!-- ===== 主区域 ===== -->
+<div class="main" id="main-area" style="display:none">
+    <div id="map-container">
+        <canvas id="map-canvas"></canvas>
+        <div class="zoom-hint">🖱 拖拽 · 滚轮缩放</div>
+        <div class="migrate-hint" id="migrate-hint">🚀 已选迁徙源，点击相邻格目标</div>
+        <div id="extinct-banner-container"></div>
+    </div>
+</div>
+
+<!-- ===== 底部导航 ===== -->
+<div class="bottom-nav" id="bottom-nav" style="display:none">
+    <button class="nav-btn active" data-tab="0"><span class="icon">📊</span><span class="label">状态</span></button>
+    <button class="nav-btn" data-tab="1"><span class="icon">🧬</span><span class="label">进化</span></button>
+    <button class="nav-btn" data-tab="2"><span class="icon">📜</span><span class="label">日志</span></button>
+</div>
+
+<!-- ===== 抽屉 ===== -->
+<div class="drawer" id="drawer">
+    <button class="close-btn" id="drawer-close">✕</button>
+    <div class="tab-buttons" id="drawer-tabs">
+        <button class="tab-btn active" data-tab="0">📊 状态</button>
+        <button class="tab-btn" data-tab="1">🧬 进化</button>
+        <button class="tab-btn" data-tab="2">📜 日志</button>
+    </div>
+    <div class="tab-content">
+        <div id="drawer-status" class="tab-pane active">
+            <div class="stat-grid">
+                <div class="stat-box"><h4>总种群</h4><div class="num pop" id="s-pop">20</div></div>
+                <div class="stat-box"><h4>基因点</h4><div class="num gp" id="s-gp">50</div></div>
+                <div class="stat-box"><h4>生态位</h4><div class="num route" id="s-route">—</div></div>
+            </div>
+            <div class="warn-box" id="deadlock-warn">⚠️ 当前格子适应度极低！考虑迁徙。</div>
+            <div class="adapt-section">
+                <h4>🌍 当前格适应度</h4>
+                <div class="adapt-bar"><div class="good" id="s-bar" style="width:40%"></div></div>
+                <div class="adapt-info"><span id="s-adapt-text">基础适应</span><span class="score" id="s-adapt-num">40%</span></div>
+            </div>
+            <!-- ===== 地块信息（新增） ===== -->
+            <div class="cell-info-section" id="cell-info-section">
+                <h4>📍 当前地块信息</h4>
+                <div class="cell-info-grid" id="cell-info-grid">
+                    <div class="ci-item"><span class="ci-label">地形</span><span class="ci-value" id="ci-terrain">—</span></div>
+                    <div class="ci-item"><span class="ci-label">温度</span><span class="ci-value" id="ci-temp">—</span></div>
+                    <div class="ci-item"><span class="ci-label">湿度</span><span class="ci-value" id="ci-humidity">—</span></div>
+                    <div class="ci-item"><span class="ci-label">氧气</span><span class="ci-value" id="ci-o2">—</span></div>
+                    <div class="ci-item"><span class="ci-label">盐度</span><span class="ci-value" id="ci-salinity">—</span></div>
+                    <div class="ci-item"><span class="ci-label">资源</span><span class="ci-value" id="ci-riches">—</span></div>
+                    <div class="ci-item" style="grid-column:span 3;border-bottom:none;padding-top:2px;border-top:1px solid rgba(255,255,255,.05);">
+                        <span class="ci-label">种群</span>
+                        <span class="ci-value" id="ci-pop" style="color:var(--ok);font-weight:800;">0</span>
+                    </div>
+                </div>
+            </div>
+            <div class="owned-section">
+                <h4>🧩 已进化系统 <small style="color:var(--dark);font-weight:400">（点击退化）</small></h4>
+                <div id="s-owned"></div>
+            </div>
+            <div class="achieve-section" id="achieve-section">
+                <h4>🏆 成就 <span class="ach-count" id="ach-count">0 / 32</span></h4>
+                <div class="achieve-grid" id="achieve-grid"></div>
+            </div>
+            <button class="next-btn" id="l-next">⏩ 结束回合</button>
+        </div>
+        <div id="drawer-evolve" class="tab-pane">
+            <div style="padding:0.5rem;text-align:center;color:var(--dim);font-size:0.7rem;">
+                🌳 点击右下角 <strong>🌳 进化树</strong> 按钮打开全屏视图
+            </div>
+            <div id="evolve-panels"></div>
+        </div>
+        <div id="drawer-log" class="tab-pane">
+            <div class="log-list" id="l-list">
+                <div class="log-item info"><span class="turn-num">[开局]</span> 你的物种诞生于六边形世界。</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== 全屏进化视图 ===== -->
+<button id="btn-evolve-fullscreen">🌳</button>
+<div id="evolve-fullscreen-overlay">
+    <div class="header">
+        <h2>🧬 进化树 <span>— 点击性状解锁或退化</span></h2>
+        <button class="close-btn" id="evolve-fullscreen-close">✕</button>
+    </div>
+    <div class="body" id="evolve-fullscreen-body"></div>
+</div>
+
+<!-- ===== Toast & Modals ===== -->
+<div class="achieve-toast" id="achieve-toast">
+    <div class="ach-tier" id="toast-tier">🏅</div>
+    <div class="ach-name" id="toast-name">成就解锁</div>
+    <div class="ach-desc" id="toast-desc">描述</div>
+</div>
+
+<div class="modal" id="event-modal">
+    <div class="modal-box"><div class="icon" id="e-icon">⚠️</div><h3 id="e-title">预警</h3><p id="e-text"></p><button id="btn-close-event">继续</button></div>
+</div>
+<div class="modal" id="degen-modal">
+    <div class="modal-box"><div class="icon">🧬</div><h3 id="d-title">退化确认</h3><p id="d-text"></p><div class="btn-row"><button class="btn-mut" id="btn-confirm-degen">确认退化</button><button id="btn-cancel-degen">取消</button></div></div>
+</div>
+<div class="modal" id="migrate-modal">
+    <div class="modal-box">
+        <div class="icon">🚀</div>
+        <h3>迁徙种群</h3>
+        <p id="migrate-info">从 (0,0) 到 (1,0)，可迁徙：<span id="migrate-max">0</span></p>
+        <p style="font-size:.6rem;color:var(--dim)" id="migrate-loss-info">迁徙损耗率：30%</p>
+        <input type="number" id="migrate-amount" value="1" min="1" step="1">
+        <div class="btn-row">
+            <button id="btn-migrate-confirm">确认迁徙</button>
+            <button id="btn-migrate-cancel">取消</button>
+        </div>
+    </div>
+</div>
+<div class="modal" id="extinct-modal">
+    <div class="modal-box">
+        <div class="icon" id="extinct-icon">💀</div>
+        <h3 id="extinct-title">大灭绝降临！</h3>
+        <p id="extinct-text"></p>
+        <div class="btn-row">
+            <button id="btn-extinct-continue" class="btn-danger">直面命运</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== 结束画面 ===== -->
+<div id="end-screen">
+    <div class="big-icon" id="end-icon">🎉</div>
+    <h2 class="win" id="end-title">恭喜通关！</h2>
+    <div class="stats">
+        <div class="stat-item"><div class="n" id="end-pop">0</div><div class="l">最终种群</div></div>
+        <div class="stat-item"><div class="n" id="end-turn">0</div><div class="l">存活回合</div></div>
+        <div class="stat-item"><div class="n" id="end-min">0</div><div class="l">最低种群</div></div>
+        <div class="stat-item"><div class="n" id="end-ach-count">0</div><div class="l">成就解锁</div></div>
+    </div>
+    <div class="stars" id="end-stars"></div>
+    <div class="ach-summary" id="end-ach-summary"></div>
+    <div class="achieve-list" id="end-achieve"></div>
+    <button class="restart" id="btn-restart">🔄 再来一局</button>
+</div>
+
+<script>
+// ================================================================
+//  完整 JavaScript —— 演化之路核心逻辑
+//  修复内容：
+//    1. 右上角重复显示 /100  → 修正 turn-num 只显示当前回合
+//    2. 无法看到地块基础介绍 → 增加「地块信息」面板
+//    3. 迁徙后新领地不显示种群数量 → 优化渲染，所有 pop>0 均显示数字
+// ================================================================
+
+// -------------------- 数据定义 --------------------
+var ROUTES = {
+    titan: {
+        name:'泰坦巨兽', icon:'🦖', desc:'陆地物理霸主，以绝对体型和力量统治陆地',
+        bonus:'体型+50%，能量消耗+30%',
+        locked:['飞行','中空骨骼','软骨内骨骼','几丁质外骨骼','深海抗压','寄生','隐蔽'],
+        systems: {
+            '运动系统': { note:'二选一专精', traits:[
+                {id:'爪', cost:4, req:['内骨骼'], envs:[{e:'丘陵',v:10},{e:'森林',v:8}], exc:'蹄', desc:'挖掘、攀爬，攻击+15%'},
+                {id:'蹄', cost:4, req:['内骨骼'], envs:[{e:'平原',v:15},{e:'稀树草原',v:10}], exc:'爪', desc:'平原奔跑+40%，移动能耗-15%'},
+                {id:'直立行走', cost:8, req:['内骨骼'], envs:[{e:'平原',v:10},{e:'丘陵',v:5}], exc:'', desc:'解放前肢，视野+25%'}
+            ]},
+            '防御系统': { note:'二选一专精', traits:[
+                {id:'骨质重甲', cost:10, req:['内骨骼'], envs:[{e:'平原',v:15},{e:'稀树草原',v:10}], exc:'厚皮脂肪', desc:'物理防御+35%，能量+10%'},
+                {id:'厚皮脂肪', cost:9, req:[], envs:[{e:'冰原',v:25},{e:'沼泽',v:5}], exc:'骨质重甲', desc:'寒冷适应+40%，能量储备+30%'}
+            ]},
+            '呼吸系统': { note:'必选主干', traits:[
+                {id:'肺泡肺', cost:6, req:[], envs:[{e:'平原',v:10},{e:'丘陵',v:5}], exc:'鳃呼吸', desc:'陆地呼吸效率+35%'},
+                {id:'四腔心', cost:8, req:['肺泡肺'], envs:[{e:'平原',v:5},{e:'冰原',v:5}], exc:'', desc:'循环效率满，支持恒温'},
+                {id:'恒温', cost:10, req:['四腔心'], envs:[{e:'冰原',v:30},{e:'平原',v:5}], exc:'变温', desc:'寒冷/温暖适应各+35%'},
+                {id:'气囊呼吸', cost:8, req:['恒温'], envs:[{e:'高山草甸',v:20},{e:'山地森林',v:10}], exc:'', desc:'高海拔适应+45%'}
+            ]},
+            '摄食系统': { note:'二选一专精', traits:[
+                {id:'裂齿', cost:4, req:[], envs:[{e:'平原',v:8},{e:'稀树草原',v:8}], exc:'研磨齿', desc:'攻击+25%，消化肉效率+45%'},
+                {id:'研磨齿', cost:4, req:[], envs:[{e:'平原',v:8},{e:'丘陵',v:8}], exc:'裂齿', desc:'处理纤维效率+50%'},
+                {id:'超噬咬', cost:10, req:['裂齿'], envs:[{e:'平原',v:10}], exc:'', desc:'对大型目标概率一击必杀'},
+                {id:'发酵腔', cost:6, req:['研磨齿'], envs:[{e:'沼泽',v:10},{e:'平原',v:5}], exc:'', desc:'植物能量转化+55%'}
+            ]},
+            '神经系统': { note:'必选', traits:[
+                {id:'脑部分化', cost:5, req:[], envs:[{e:'平原',v:3}], exc:'', desc:'学习能力初现'},
+                {id:'复杂学习', cost:8, req:['脑部分化'], envs:[{e:'平原',v:3},{e:'丘陵',v:3}], exc:'', desc:'环境适应快'},
+                {id:'自我意识', cost:12, req:['复杂学习'], envs:[{e:'平原',v:5}], exc:'', desc:'灾变恢复+50%'}
+            ]},
+            '繁殖系统': { note:'必选', traits:[
+                {id:'硬壳卵', cost:5, req:['体内受精'], envs:[{e:'平原',v:10},{e:'丘陵',v:5}], exc:'胎生', desc:'后代存活+35%'},
+                {id:'胎生', cost:5, req:['体内受精'], envs:[{e:'冰原',v:15},{e:'平原',v:5}], exc:'硬壳卵', desc:'后代存活+35%'},
+                {id:'哺乳', cost:7, req:['胎生'], envs:[{e:'平原',v:5},{e:'冰原',v:5}], exc:'', desc:'幼体成长加速'}
+            ]},
+            '感官系统': { note:'三选一专精', traits:[
+                {id:'热视红外', cost:5, req:['脊椎眼'], envs:[{e:'平原',v:10},{e:'稀树草原',v:8}], exc:'', desc:'侦测恒温猎物'},
+                {id:'夜视视觉', cost:4, req:['脊椎眼'], envs:[{e:'森林',v:12},{e:'沼泽',v:8}], exc:'', desc:'微光环境适应+55%'},
+                {id:'广角嗅觉', cost:5, req:['化学感受器'], envs:[{e:'平原',v:8},{e:'丘陵',v:8}], exc:'', desc:'追踪气味，范围+40%'}
+            ]},
+            '终极': { note:'泰坦之巅', traits:[
+                {id:'终极巨兽', cost:22, req:['巨型体躯','骨质重甲'], envs:[{e:'平原',v:20},{e:'稀树草原',v:15}], exc:'', desc:'体型再次翻倍，种群+60%，能耗+100%，移速-50%'}
+            ]}
+        }
+    },
+    swarm: {
+        name:'虫群天灾', icon:'🐜', desc:'节肢动物，以绝对数量和外骨骼防御淹没敌人',
+        bonus:'繁殖速度+40%，个体防御-20%',
+        locked:['恒温','四腔心','巨型体躯','骨质重甲','胎生','双循环系统'],
+        systems: {
+            '运动系统': { note:'三选一专精', traits:[
+                {id:'步行足', cost:5, req:['分节附肢'], envs:[{e:'平原',v:8},{e:'沼泽',v:5}], exc:'', desc:'陆地移动基础'},
+                {id:'跳跃足', cost:6, req:['分节附肢'], envs:[{e:'稀树草原',v:10},{e:'丘陵',v:8}], exc:'', desc:'爆发逃逸，跳跃距离+50%'},
+                {id:'翅基飞行', cost:10, req:['翅基原基'], envs:[{e:'平原',v:10},{e:'沼泽',v:5}], exc:'', desc:'需大气氧>25%'}
+            ]},
+            '防御系统': { note:'外骨骼路线', traits:[
+                {id:'几丁质外骨骼', cost:6, req:['假体腔'], envs:[{e:'沼泽',v:10},{e:'平原',v:5}], exc:'骨质重甲', desc:'物理防御+25%'},
+                {id:'钙化甲壳', cost:8, req:['几丁质外骨骼'], envs:[{e:'浅海',v:10},{e:'滩涂',v:8}], exc:'', desc:'防御+40%，可半水生'},
+                {id:'完全变态发育', cost:12, req:['钙化甲壳'], envs:[{e:'平原',v:5},{e:'沼泽',v:5}], exc:'', desc:'存活率+55%'}
+            ]},
+            '呼吸系统': { note:'锁定：气管系统', traits:[
+                {id:'气管网络', cost:3, req:['假体腔'], envs:[{e:'平原',v:5}], exc:'肺泡肺', desc:'开放循环基础'},
+                {id:'气门泵吸', cost:5, req:['气管网络'], envs:[{e:'平原',v:5},{e:'稀树草原',v:5}], exc:'', desc:'氧气摄取效率+25%'},
+                {id:'气囊辅助气管', cost:7, req:['气门泵吸'], envs:[{e:'高山草甸',v:10},{e:'平原',v:5}], exc:'', desc:'高氧环境下代谢+40%'}
+            ]},
+            '摄食系统': { note:'二选一', traits:[
+                {id:'咀嚼口器', cost:3, req:[], envs:[{e:'平原',v:5},{e:'沼泽',v:5}], exc:'', desc:'处理植物/腐肉'},
+                {id:'毒牙', cost:4, req:[], envs:[{e:'沼泽',v:8},{e:'森林',v:8}], exc:'', desc:'攻击+20%，附带毒素'},
+                {id:'抗腐酶', cost:4, req:['咀嚼口器'], envs:[{e:'沼泽',v:5}], exc:'', desc:'免疫尸体/腐败毒素'},
+                {id:'吸血口器', cost:5, req:['毒牙'], envs:[{e:'平原',v:5}], exc:'', desc:'吸取体液，攻击附带吸血'}
+            ]},
+            '神经系统': { note:'锁定：群体方向', traits:[
+                {id:'脑神经节', cost:5, req:[], envs:[{e:'平原',v:3}], exc:'脑部分化', desc:'本能复杂化'},
+                {id:'信息素社会', cost:7, req:['脑神经节'], envs:[{e:'平原',v:3}], exc:'', desc:'群体协调+45%'},
+                {id:'蜂巢思维', cost:10, req:['信息素社会'], envs:[{e:'平原',v:5}], exc:'自我意识', desc:'集体智能，无个体恐惧'}
+            ]},
+            '繁殖系统': { note:'锁定：r-策略', traits:[
+                {id:'海量卵', cost:3, req:['体外受精'], envs:[{e:'浅海',v:5},{e:'沼泽',v:5}], exc:'胎生', desc:'单次产卵量×10'},
+                {id:'早熟', cost:4, req:['海量卵'], envs:[{e:'平原',v:5}], exc:'', desc:'生长周期减半'},
+                {id:'孤雌生殖', cost:8, req:['早熟'], envs:[{e:'平原',v:5}], exc:'', desc:'无配偶也能爆发种群'}
+            ]},
+            '感官系统': { note:'节肢感官', traits:[
+                {id:'复眼广角', cost:5, req:[], envs:[{e:'平原',v:8},{e:'稀树草原',v:8}], exc:'脊椎眼', desc:'视野+35%'},
+                {id:'触角化学感', cost:4, req:['化学感受器'], envs:[{e:'沼泽',v:8},{e:'森林',v:8}], exc:'', desc:'化学追踪，信息素解析'},
+                {id:'震动感知', cost:4, req:[], envs:[{e:'平原',v:5},{e:'丘陵',v:5}], exc:'', desc:'侦测地面震动'}
+            ]},
+            '终极': { note:'虫巢之魂', traits:[
+                {id:'虫巢意志', cost:18, req:['蜂巢思维','信息素社会'], envs:[{e:'平原',v:10},{e:'沼泽',v:10}], exc:'', desc:'蜂巢思维升级，全地图虫群协调+100%，繁殖+50%'}
+            ]}
+        }
+    },
+    abyss: {
+        name:'深渊利维坦', icon:'🐙', desc:'深海大型动物，在高压黑暗中统治海底',
+        bonus:'深海适应+60%，陆地适应-80%',
+        locked:['四肢行走','飞行','巨型体躯','骨质重甲','中空骨骼','肺呼吸','恒温','羊膜卵'],
+        systems: {
+            '运动系统': { note:'锁定：水生', traits:[
+                {id:'鳍褶', cost:4, req:['脊索'], envs:[{e:'浅海',v:8},{e:'深海',v:5}], exc:'四肢行走', desc:'游泳+25%'},
+                {id:'流线体型', cost:6, req:['鳍褶'], envs:[{e:'浅海',v:10},{e:'深海',v:10}], exc:'', desc:'游速+30%，迁徙损耗-20%'},
+                {id:'鳔浮力', cost:5, req:['流线体型'], envs:[{e:'深海',v:15},{e:'浅海',v:5}], exc:'', desc:'深海适应+35%'},
+                {id:'尾柄隆起', cost:7, req:['流线体型'], envs:[{e:'浅海',v:10},{e:'深海',v:10}], exc:'', desc:'爆发冲刺速度+40%'}
+            ]},
+            '防御系统': { note:'依赖深度', traits:[
+                {id:'黏液层', cost:4, req:[], envs:[{e:'浅海',v:5},{e:'深海',v:5}], exc:'', desc:'减少摩擦，寄生虫抵抗'},
+                {id:'膨胀威胁', cost:6, req:['黏液层'], envs:[{e:'深海',v:10},{e:'浅海',v:5}], exc:'', desc:'吸入水膨胀体型'}
+            ]},
+            '呼吸系统': { note:'锁定：鳃专精', traits:[
+                {id:'鳃盖与泵吸', cost:4, req:[], envs:[{e:'浅海',v:8},{e:'深海',v:5}], exc:'肺泡肺', desc:'水氧效率+25%'},
+                {id:'逆流交换鳃', cost:7, req:['鳃盖与泵吸'], envs:[{e:'深海',v:15},{e:'浅海',v:5}], exc:'', desc:'低氧水域适应+45%'},
+                {id:'电器官循环', cost:10, req:['逆流交换鳃'], envs:[{e:'深海',v:10}], exc:'', desc:'可放电攻击'}
+            ]},
+            '摄食系统': { note:'二选一', traits:[
+                {id:'裂齿', cost:4, req:[], envs:[{e:'浅海',v:8},{e:'深海',v:5}], exc:'鲸须板', desc:'攻击+25%'},
+                {id:'鲸须板', cost:6, req:[], envs:[{e:'浅海',v:10},{e:'深海',v:5}], exc:'裂齿', desc:'滤食效率+60%'},
+                {id:'超噬咬', cost:10, req:['裂齿'], envs:[{e:'深海',v:10}], exc:'', desc:'对大型目标概率一击必杀'},
+                {id:'巨口吞水', cost:8, req:['鲸须板'], envs:[{e:'浅海',v:8},{e:'深海',v:8}], exc:'', desc:'一次吞入大量水体'}
+            ]},
+            '神经系统': { note:'节能优先', traits:[
+                {id:'神经索', cost:3, req:[], envs:[{e:'深海',v:3}], exc:'脑部分化', desc:'基础反射'},
+                {id:'电感神经', cost:6, req:['神经索'], envs:[{e:'深海',v:15},{e:'浅海',v:5}], exc:'', desc:'感知电场'}
+            ]},
+            '繁殖系统': { note:'海量卵', traits:[
+                {id:'海量卵', cost:3, req:['体外受精'], envs:[{e:'浅海',v:5},{e:'深海',v:5}], exc:'胎生', desc:'产卵量巨大'},
+                {id:'幼体浮游期', cost:5, req:['海量卵'], envs:[{e:'浅海',v:5},{e:'深海',v:5}], exc:'', desc:'幼体在表层浮游'}
+            ]},
+            '感官系统': { note:'锁定：非视觉', traits:[
+                {id:'回声定位', cost:6, req:[], envs:[{e:'深海',v:20},{e:'浅海',v:5}], exc:'脊椎眼', desc:'无光环境全效'},
+                {id:'电感探测', cost:7, req:['电感神经'], envs:[{e:'深海',v:15}], exc:'', desc:'侦测生物电场'},
+                {id:'侧线系统', cost:4, req:[], envs:[{e:'浅海',v:8},{e:'深海',v:8}], exc:'', desc:'感知水压变化'}
+            ]},
+            '终极': { note:'深渊之巅', traits:[
+                {id:'深海之王', cost:20, req:['抗压凝胶','逆流交换鳃'], envs:[{e:'深海',v:30},{e:'浅海',v:10}], exc:'', desc:'深海适应+80%，可在任何深度生存，攻击+50%'}
+            ]}
+        }
+    },
+    sky: {
+        name:'天空主宰', icon:'🦅', desc:'飞行动物，以三维机动性无视地形限制',
+        bonus:'无视地形移动，能量消耗+25%，迁徙损耗-50%',
+        locked:['巨型体躯','深海抗压','骨质重甲','胎生','软骨内骨骼','鳃呼吸','厚皮脂肪'],
+        systems: {
+            '运动系统': { note:'锁定：飞行', traits:[
+                {id:'中空骨骼', cost:8, req:['内骨骼'], envs:[{e:'平原',v:5},{e:'丘陵',v:5},{e:'高山草甸',v:5}], exc:'巨型体躯', desc:'体重-30%，飞行敏捷+25%'},
+                {id:'飞羽', cost:8, req:['中空骨骼'], envs:[{e:'平原',v:5},{e:'高山草甸',v:5}], exc:'', desc:'需恒温支持，解锁滑翔'},
+                {id:'动力飞行', cost:12, req:['飞羽'], envs:[{e:'平原',v:8},{e:'高山草甸',v:8}], exc:'', desc:'持续飞行能力'},
+                {id:'长距离迁徙', cost:10, req:['动力飞行'], envs:[{e:'平原',v:5},{e:'丘陵',v:5}], exc:'', desc:'跨大陆移动能力，迁徙损耗-20%'}
+            ]},
+            '防御系统': { note:'轻量化', traits:[
+                {id:'羽毛覆盖', cost:4, req:['飞羽'], envs:[{e:'平原',v:5},{e:'高山草甸',v:5}], exc:'', desc:'防御+10%，保温+20%'},
+                {id:'绒羽保温层', cost:6, req:['羽毛覆盖'], envs:[{e:'冰原',v:20},{e:'高山草甸',v:10}], exc:'', desc:'极寒适应+45%'},
+                {id:'尾羽扇', cost:5, req:['动力飞行'], envs:[{e:'平原',v:5}], exc:'', desc:'空中机动+20%'}
+            ]},
+            '呼吸系统': { note:'锁定：气囊呼吸', traits:[
+                {id:'肺泡肺', cost:6, req:[], envs:[{e:'高山草甸',v:8}], exc:'鳃呼吸', desc:'基础（必须）'},
+                {id:'四腔心', cost:8, req:['肺泡肺'], envs:[{e:'高山草甸',v:5}], exc:'', desc:'循环效率满'},
+                {id:'恒温', cost:10, req:['四腔心'], envs:[{e:'冰原',v:20},{e:'高山草甸',v:10}], exc:'变温', desc:'飞行高代谢必须'},
+                {id:'气囊呼吸', cost:8, req:['恒温'], envs:[{e:'高山草甸',v:15},{e:'山地森林',v:10}], exc:'', desc:'高海拔适应+45%'},
+                {id:'双重呼吸', cost:10, req:['气囊呼吸'], envs:[{e:'高山草甸',v:10}], exc:'', desc:'飞行耐力+50%'}
+            ]},
+            '摄食系统': { note:'二选一', traits:[
+                {id:'钩爪', cost:4, req:['爪'], envs:[{e:'平原',v:8},{e:'丘陵',v:8}], exc:'', desc:'空中抓取，攻击+15%'},
+                {id:'裂齿', cost:4, req:[], envs:[{e:'平原',v:5}], exc:'研磨齿', desc:'撕咬效率+35%'},
+                {id:'俯冲攻击', cost:8, req:['钩爪'], envs:[{e:'平原',v:10},{e:'稀树草原',v:10}], exc:'', desc:'从高空俯冲，伤害×2'},
+                {id:'食谱广度', cost:6, req:['研磨齿'], envs:[{e:'平原',v:5}], exc:'', desc:'几乎什么都吃'}
+            ]},
+            '神经系统': { note:'必选', traits:[
+                {id:'脑部分化', cost:5, req:[], envs:[{e:'平原',v:3}], exc:'', desc:'学习能力初现'},
+                {id:'复杂学习', cost:8, req:['脑部分化'], envs:[{e:'平原',v:3}], exc:'', desc:'环境适应快'},
+                {id:'空间导航', cost:10, req:['复杂学习'], envs:[{e:'平原',v:5}], exc:'', desc:'长距离迁徙不迷路，迁徙损耗-15%'}
+            ]},
+            '繁殖系统': { note:'产卵', traits:[
+                {id:'硬壳卵', cost:5, req:['体内受精'], envs:[{e:'高山草甸',v:10},{e:'丘陵',v:5}], exc:'胎生', desc:'后代存活+25%'},
+                {id:'孵卵行为', cost:6, req:['硬壳卵'], envs:[{e:'高山草甸',v:10},{e:'平原',v:5}], exc:'', desc:'孵化成功率+40%'},
+                {id:'育雏', cost:8, req:['孵卵行为'], envs:[{e:'平原',v:5}], exc:'', desc:'幼体成长加速'}
+            ]},
+            '感官系统': { note:'视觉专精', traits:[
+                {id:'锐利视觉', cost:6, req:['脊椎眼'], envs:[{e:'平原',v:10},{e:'高山草甸',v:15}], exc:'', desc:'高空侦测地面猎物'},
+                {id:'紫外视觉', cost:5, req:['锐利视觉'], envs:[{e:'平原',v:5},{e:'高山草甸',v:5}], exc:'', desc:'可看见紫外光谱'},
+                {id:'磁感导航', cost:6, req:['空间导航'], envs:[{e:'平原',v:5}], exc:'', desc:'感知地磁场，迁徙损耗-10%'}
+            ]},
+            '终极': { note:'苍穹之巅', traits:[
+                {id:'天空霸主', cost:24, req:['动力飞行','气囊呼吸','恒温'], envs:[{e:'平原',v:10},{e:'高山草甸',v:20}], exc:'', desc:'完全无视地形，飞行能耗-50%，迁徙损耗-80%'}
+            ]}
+        }
+    },
+    plague: {
+        name:'瘟疫化身', icon:'🦠', desc:'寄生生物，依附于宿主生存，操控宿主行为',
+        bonus:'依附宿主生存，独立生存-50%',
+        locked:['独立摄食','独立运动','大型化','装甲','恒温','肺呼吸','内骨骼','四肢行走'],
+        systems: {
+            '基础架构': { note:'简化身体', traits:[
+                {id:'体壁简化', cost:4, req:['组织分化'], envs:[{e:'沼泽',v:3},{e:'平原',v:3}], exc:'内骨骼', desc:'失去复杂器官'},
+                {id:'微型化', cost:6, req:['体壁简化'], envs:[{e:'沼泽',v:5},{e:'平原',v:5}], exc:'巨型体躯', desc:'所有独立生存能力-80%'},
+                {id:'宿主营养接口', cost:8, req:['微型化'], envs:[{e:'沼泽',v:5},{e:'平原',v:5}], exc:'', desc:'直接吸取宿主血液'}
+            ]},
+            '运动系统': { note:'宿主间转移', traits:[
+                {id:'蠕动', cost:3, req:['体壁简化'], envs:[{e:'沼泽',v:3},{e:'平原',v:3}], exc:'四肢行走', desc:'在宿主体内缓慢移动'},
+                {id:'跳跃传播', cost:6, req:['蠕动'], envs:[{e:'沼泽',v:5},{e:'平原',v:5}], exc:'飞行', desc:'从一个宿主跳到另一个'},
+                {id:'随风飘散', cost:5, req:['跳跃传播'], envs:[{e:'平原',v:5}], exc:'', desc:'幼虫随风传播，迁徙损耗-25%'}
+            ]},
+            '防御系统': { note:'宿主即盾牌', traits:[
+                {id:'抗宿主免疫', cost:6, req:['宿主营养接口'], envs:[{e:'沼泽',v:5},{e:'平原',v:5}], exc:'骨质重甲', desc:'抵抗宿主免疫系统'},
+                {id:'伪装抗原', cost:8, req:['抗宿主免疫'], envs:[{e:'沼泽',v:5},{e:'平原',v:5}], exc:'', desc:'伪装成宿主自身组织'}
+            ]},
+            '呼吸系统': { note:'皮肤扩散', traits:[
+                {id:'皮肤扩散', cost:3, req:['体壁简化'], envs:[{e:'沼泽',v:3},{e:'平原',v:3}], exc:'肺泡肺', desc:'通过体壁直接交换气体'},
+                {id:'厌氧代谢', cost:6, req:['皮肤扩散'], envs:[{e:'沼泽',v:5},{e:'平原',v:5}], exc:'', desc:'可在低氧环境生存'}
+            ]},
+            '摄食系统': { note:'寄生摄食', traits:[
+                {id:'吸血口器', cost:5, req:['宿主营养接口'], envs:[{e:'沼泽',v:5},{e:'平原',v:5}], exc:'裂齿', desc:'吸取宿主血液'},
+                {id:'组织溶解酶', cost:7, req:['吸血口器'], envs:[{e:'沼泽',v:5},{e:'平原',v:5}], exc:'', desc:'溶解宿主组织'},
+                {id:'营养窃取', cost:8, req:['组织溶解酶'], envs:[{e:'沼泽',v:5},{e:'平原',v:5}], exc:'', desc:'直接接入宿主消化系统'}
+            ]},
+            '神经系统': { note:'操控宿主', traits:[
+                {id:'神经侵入', cost:8, req:['微型化'], envs:[{e:'沼泽',v:5},{e:'平原',v:5}], exc:'脑部分化', desc:'侵入宿主神经系统'},
+                {id:'行为操控', cost:10, req:['神经侵入'], envs:[{e:'沼泽',v:5},{e:'平原',v:5}], exc:'自我意识', desc:'控制宿主行为'},
+                {id:'多宿主兼容', cost:12, req:['行为操控'], envs:[{e:'沼泽',v:5},{e:'平原',v:5}], exc:'', desc:'可感染多种宿主'}
+            ]},
+            '繁殖系统': { note:'r-策略极限', traits:[
+                {id:'体内爆发繁殖', cost:5, req:['宿主营养接口'], envs:[{e:'沼泽',v:5},{e:'平原',v:5}], exc:'胎生', desc:'在宿主体内大量产卵'},
+                {id:'跨代传播', cost:7, req:['体内爆发繁殖'], envs:[{e:'沼泽',v:5},{e:'平原',v:5}], exc:'', desc:'感染宿主后代'},
+                {id:'休眠卵', cost:8, req:['跨代传播'], envs:[{e:'沼泽',v:5},{e:'平原',v:5}], exc:'', desc:'宿主死亡后卵休眠'}
+            ]},
+            '终极': { note:'瘟疫之巅', traits:[
+                {id:'完美宿主', cost:20, req:['行为操控','多宿主兼容'], envs:[{e:'沼泽',v:10},{e:'平原',v:10}], exc:'', desc:'可寄生任何生物，宿主死亡后自动转移，种群+50%'}
+            ]}
+        }
+    },
+    reef: {
+        name:'盖亚礁体', icon:'🪸', desc:'固着生物，形成礁体，改造环境，以光合或滤食为生',
+        bonus:'环境改造+40%，无法移动',
+        locked:['四肢行走','飞行','肌肉收缩','内骨骼','脑化','迁徙','肺呼吸','恒温'],
+        systems: {
+            '基础架构': { note:'固着集群', traits:[
+                {id:'水沟系统', cost:4, req:['组织分化'], envs:[{e:'浅海',v:15},{e:'滩涂',v:10}], exc:'内骨骼', desc:'滤食效率+55%'},
+                {id:'钙质骨针', cost:5, req:['水沟系统'], envs:[{e:'浅海',v:10},{e:'滩涂',v:5}], exc:'骨质重甲', desc:'形成礁体，防御+35%'},
+                {id:'共肉连接', cost:6, req:['钙质骨针'], envs:[{e:'浅海',v:5},{e:'滩涂',v:5}], exc:'', desc:'群体共享营养'}
+            ]},
+            '防御系统': { note:'礁体防御', traits:[
+                {id:'共肉连接', cost:6, req:['水沟系统'], envs:[{e:'浅海',v:5}], exc:'', desc:'群体共享伤害'},
+                {id:'毒素分泌', cost:7, req:['共肉连接'], envs:[{e:'浅海',v:5},{e:'滩涂',v:5}], exc:'', desc:'驱离捕食者'},
+                {id:'硬化外壳', cost:10, req:['钙质骨针'], envs:[{e:'浅海',v:5},{e:'滩涂',v:5}], exc:'', desc:'免疫物理撕咬'}
+            ]},
+            '摄食系统': { note:'光合或滤食', traits:[
+                {id:'共生藻', cost:8, req:['水沟系统'], envs:[{e:'浅海',v:15},{e:'滩涂',v:10}], exc:'', desc:'有光时能量+35%'},
+                {id:'光合扩张', cost:10, req:['共生藻'], envs:[{e:'浅海',v:10}], exc:'', desc:'占据的每格都产生能量'},
+                {id:'鞭毛泵', cost:6, req:['水沟系统'], envs:[{e:'浅海',v:10},{e:'滩涂',v:5}], exc:'', desc:'水流通过效率+40%'}
+            ]},
+            '神经系统': { note:'无大脑', traits:[
+                {id:'神经网', cost:2, req:['组织分化'], envs:[{e:'浅海',v:3},{e:'滩涂',v:3}], exc:'脑部分化', desc:'基础反射'},
+                {id:'光感应', cost:3, req:['神经网'], envs:[{e:'浅海',v:5},{e:'滩涂',v:5}], exc:'脊椎眼', desc:'感知光照方向'}
+            ]},
+            '繁殖系统': { note:'扩散', traits:[
+                {id:'孢子释放', cost:4, req:[], envs:[{e:'浅海',v:5},{e:'滩涂',v:5}], exc:'胎生', desc:'随风/水流扩散'},
+                {id:'出芽生殖', cost:5, req:['孢子释放'], envs:[{e:'浅海',v:5},{e:'滩涂',v:5}], exc:'', desc:'直接分裂扩张'},
+                {id:'幼虫扩散', cost:5, req:['出芽生殖'], envs:[{e:'浅海',v:5},{e:'滩涂',v:5}], exc:'迁徙', desc:'释放可移动幼虫'}
+            ]},
+            '终极': { note:'礁体之巅', traits:[
+                {id:'生态改造', cost:18, req:['共生藻','光合扩张'], envs:[{e:'浅海',v:15},{e:'滩涂',v:15}], exc:'', desc:'改造周围地形为珊瑚礁，全地图资源+20%'}
+            ]}
+        }
+    },
+    sage: {
+        name:'智人文明', icon:'🧠', desc:'中型陆地动物，以大脑和工具使用统治世界',
+        bonus:'知识积累+50%，大脑能耗+40%',
+        locked:['蜂巢思维','巨型体躯','骨质重甲','飞行','几丁质外骨骼','鳃呼吸','软骨内骨骼'],
+        systems: {
+            '运动系统': { note:'直立行走', traits:[
+                {id:'爪', cost:4, req:['内骨骼'], envs:[{e:'丘陵',v:5},{e:'森林',v:5}], exc:'蹄', desc:'挖掘、攀爬，为工具奠基'},
+                {id:'对握趾', cost:6, req:['爪'], envs:[{e:'平原',v:8},{e:'森林',v:8}], exc:'', desc:'灵巧操作，解锁工具使用'},
+                {id:'直立行走', cost:8, req:['对握趾'], envs:[{e:'平原',v:10},{e:'稀树草原',v:10}], exc:'四肢行走', desc:'解放前肢，视野+25%'},
+                {id:'耐力奔跑', cost:7, req:['直立行走'], envs:[{e:'平原',v:10},{e:'稀树草原',v:8}], exc:'', desc:'长距离追逐猎物，迁徙损耗-15%'}
+            ]},
+            '防御系统': { note:'工具防御', traits:[
+                {id:'毛皮覆盖', cost:5, req:['恒温'], envs:[{e:'冰原',v:15},{e:'山地森林',v:5}], exc:'羽毛', desc:'保温+25%'},
+                {id:'皮下脂肪', cost:6, req:['毛皮覆盖'], envs:[{e:'冰原',v:20},{e:'平原',v:5}], exc:'骨质重甲', desc:'寒冷适应+40%'},
+                {id:'汗腺散热', cost:5, req:['恒温'], envs:[{e:'稀树草原',v:10},{e:'平原',v:5}], exc:'', desc:'长跑散热，热带适应+30%'}
+            ]},
+            '呼吸系统': { note:'必选', traits:[
+                {id:'肺泡肺', cost:6, req:[], envs:[{e:'平原',v:8},{e:'丘陵',v:5}], exc:'鳃呼吸', desc:'陆地呼吸效率+35%'},
+                {id:'四腔心', cost:8, req:['肺泡肺'], envs:[{e:'平原',v:5},{e:'冰原',v:5}], exc:'', desc:'循环效率满'},
+                {id:'恒温', cost:10, req:['四腔心'], envs:[{e:'冰原',v:15},{e:'平原',v:5}], exc:'变温', desc:'高脑耗必须'},
+                {id:'气囊呼吸', cost:8, req:['恒温'], envs:[{e:'高山草甸',v:10},{e:'山地森林',v:5}], exc:'', desc:'高海拔适应'}
+            ]},
+            '摄食系统': { note:'锁定：杂食', traits:[
+                {id:'裂齿', cost:4, req:[], envs:[{e:'平原',v:5}], exc:'', desc:'可处理肉类'},
+                {id:'研磨齿', cost:4, req:[], envs:[{e:'平原',v:5}], exc:'', desc:'可处理植物'},
+                {id:'解毒肝', cost:7, req:['研磨齿'], envs:[{e:'森林',v:8},{e:'平原',v:5}], exc:'', desc:'可食有毒植物'},
+                {id:'烹饪消化', cost:8, req:['裂齿'], envs:[{e:'平原',v:10}], exc:'', desc:'消化效率+60%'}
+            ]},
+            '神经系统': { note:'核心，必须投资', traits:[
+                {id:'脑部分化', cost:5, req:[], envs:[{e:'平原',v:3}], exc:'蜂巢思维', desc:'学习能力初现'},
+                {id:'复杂学习', cost:8, req:['脑部分化'], envs:[{e:'平原',v:3},{e:'丘陵',v:3}], exc:'', desc:'环境适应+40%'},
+                {id:'自我意识', cost:12, req:['复杂学习'], envs:[{e:'平原',v:5}], exc:'', desc:'文化传承，灾变恢复+55%'},
+                {id:'语言符号', cost:10, req:['自我意识'], envs:[{e:'平原',v:5}], exc:'', desc:'群体协作+50%，知识跨代累积'}
+            ]},
+            '繁殖系统': { note:'质量投资', traits:[
+                {id:'胎生', cost:5, req:['体内受精'], envs:[{e:'平原',v:5},{e:'冰原',v:5}], exc:'硬壳卵', desc:'后代存活+35%'},
+                {id:'哺乳', cost:7, req:['胎生'], envs:[{e:'平原',v:5},{e:'冰原',v:5}], exc:'', desc:'幼体成长加速'},
+                {id:'长寿命', cost:10, req:['哺乳'], envs:[{e:'平原',v:5}], exc:'', desc:'经验智力加成'},
+                {id:'祖母效应', cost:8, req:['长寿命'], envs:[{e:'平原',v:5}], exc:'', desc:'后代存活再+20%'}
+            ]},
+            '感官系统': { note:'精细感知', traits:[
+                {id:'三色视觉', cost:6, req:['脊椎眼'], envs:[{e:'森林',v:10},{e:'平原',v:5}], exc:'', desc:'果实识别+40%'},
+                {id:'立体视觉', cost:5, req:['三色视觉'], envs:[{e:'平原',v:8},{e:'丘陵',v:8}], exc:'', desc:'投掷精度+35%'},
+                {id:'精细听觉', cost:5, req:['脊椎眼'], envs:[{e:'森林',v:8},{e:'平原',v:5}], exc:'', desc:'语言解析，警戒+30%'}
+            ]},
+            '终极': { note:'文明之巅', traits:[
+                {id:'文明之光', cost:25, req:['自我意识','语言符号'], envs:[{e:'平原',v:10},{e:'丘陵',v:10}], exc:'', desc:'知识累积速度+200%，工具效率+100%，所有性状效果+50%'}
+            ]}
+        }
+    },
+    ghost: {
+        name:'幽灵幻象', icon:'👻', desc:'小型隐蔽动物，不战斗，只隐藏和逃跑',
+        bonus:'隐蔽率+50%，攻击-40%',
+        locked:['正面战斗','骨质重甲','巨型体躯','恒温','飞行','内骨骼','裂齿','超噬咬'],
+        systems: {
+            '基础架构': { note:'简化身体，保留神经', traits:[
+                {id:'微型化', cost:4, req:['组织分化'], envs:[{e:'森林',v:8},{e:'沼泽',v:5}], exc:'巨型体躯', desc:'隐蔽率基础+30%'},
+                {id:'低代谢', cost:5, req:['微型化'], envs:[{e:'森林',v:5},{e:'沼泽',v:5}], exc:'恒温', desc:'能量消耗-50%'},
+                {id:'色素细胞', cost:3, req:['微型化'], envs:[{e:'森林',v:5},{e:'沼泽',v:5}], exc:'', desc:'本体隐蔽+10%'}
+            ]},
+            '运动系统': { note:'只为逃跑', traits:[
+                {id:'快速逃逸', cost:5, req:['微型化'], envs:[{e:'森林',v:8},{e:'丘陵',v:8}], exc:'四肢行走', desc:'爆发速度+40%'},
+                {id:'掘穴', cost:6, req:['快速逃逸'], envs:[{e:'平原',v:10},{e:'森林',v:8}], exc:'', desc:'地下藏匿，隐蔽+50%'},
+                {id:'树栖跳跃', cost:5, req:['快速逃逸'], envs:[{e:'森林',v:12},{e:'山地森林',v:8}], exc:'', desc:'森林环境机动+35%'},
+                {id:'滑翔', cost:5, req:['树栖跳跃'], envs:[{e:'森林',v:5},{e:'山地森林',v:5}], exc:'飞行', desc:'树间移动，摔落无伤，迁徙损耗-15%'}
+            ]},
+            '防御系统': { note:'不被打到', traits:[
+                {id:'脱落尾', cost:5, req:['低代谢'], envs:[{e:'森林',v:5},{e:'沼泽',v:5}], exc:'骨质重甲', desc:'被抓住时可逃脱'},
+                {id:'装死', cost:4, req:['脱落尾'], envs:[{e:'平原',v:5},{e:'森林',v:5}], exc:'', desc:'捕食者可能放弃'}
+            ]},
+            '摄食系统': { note:'机会主义', traits:[
+                {id:'杂食', cost:3, req:['低代谢'], envs:[{e:'森林',v:5},{e:'沼泽',v:5}], exc:'裂齿', desc:'什么都吃'},
+                {id:'夜行觅食', cost:5, req:['杂食'], envs:[{e:'森林',v:8},{e:'沼泽',v:8}], exc:'', desc:'避开日间捕食者'},
+                {id:'腐食', cost:4, req:['杂食'], envs:[{e:'森林',v:5},{e:'平原',v:5}], exc:'', desc:'吃残羹剩饭'}
+            ]},
+            '神经系统': { note:'警觉优先', traits:[
+                {id:'警觉反射', cost:5, req:['微型化'], envs:[{e:'森林',v:5},{e:'沼泽',v:5}], exc:'脑部分化', desc:'侦测威胁速度+40%'},
+                {id:'逃生本能', cost:6, req:['警觉反射'], envs:[{e:'森林',v:5},{e:'丘陵',v:5}], exc:'复杂学习', desc:'自动最优逃跑路径'}
+            ]},
+            '繁殖系统': { note:'r-策略', traits:[
+                {id:'海量卵', cost:3, req:['体外受精'], envs:[{e:'森林',v:5},{e:'沼泽',v:5}], exc:'胎生', desc:'数量弥补存活率'},
+                {id:'早熟', cost:4, req:['海量卵'], envs:[{e:'森林',v:5},{e:'平原',v:5}], exc:'哺乳', desc:'快速成熟'},
+                {id:'隐蔽产卵', cost:5, req:['早熟'], envs:[{e:'森林',v:8},{e:'沼泽',v:8}], exc:'', desc:'卵伪装成环境'}
+            ]},
+            '感官系统': { note:'感知威胁', traits:[
+                {id:'夜视', cost:4, req:['脊椎眼'], envs:[{e:'森林',v:10},{e:'沼泽',v:8}], exc:'', desc:'夜间活动必备'},
+                {id:'震动感知', cost:4, req:[], envs:[{e:'平原',v:5},{e:'森林',v:5}], exc:'', desc:'侦测附近捕食者'},
+                {id:'广角听觉', cost:5, req:['夜视'], envs:[{e:'森林',v:8},{e:'丘陵',v:8}], exc:'', desc:'警戒范围+40%'}
+            ]},
+            '终极': { note:'虚无之巅', traits:[
+                {id:'虚空行者', cost:20, req:['光学隐形','低代谢'], envs:[{e:'森林',v:15},{e:'沼泽',v:15}], exc:'', desc:'完全隐形，不会被捕食，可穿越任何地形'}
+            ]}
+        }
+    }
+};
+
+var BASE_TRAITS = [
+    {id:'真核细胞', cost:1, req:[], envs:[], exc:'', desc:'生命基础'},
+    {id:'多细胞聚合', cost:2, req:['真核细胞'], envs:[{e:'浅海',v:3},{e:'沼泽',v:3}], exc:'', desc:'+5%环境抗性'},
+    {id:'组织分化', cost:3, req:['多细胞聚合'], envs:[{e:'浅海',v:3},{e:'沼泽',v:3}], exc:'', desc:'解锁八条路线入口'},
+    {id:'假体腔', cost:4, req:['组织分化'], envs:[{e:'浅海',v:3},{e:'沼泽',v:3}], exc:'真体腔', desc:'支持开放循环'},
+    {id:'真体腔', cost:5, req:['组织分化'], envs:[{e:'浅海',v:3},{e:'沼泽',v:3}], exc:'假体腔', desc:'体型上限+10%'},
+    {id:'脊索', cost:7, req:['真体腔'], envs:[{e:'浅海',v:3}], exc:'分节附肢', desc:'支撑身体'},
+    {id:'分节附肢', cost:5, req:['假体腔'], envs:[{e:'沼泽',v:3}], exc:'脊索', desc:'解锁多足机动'},
+    {id:'内骨骼', cost:10, req:['脊索'], envs:[{e:'平原',v:5},{e:'丘陵',v:5}], exc:'几丁质外骨骼', desc:'支持陆地体重'},
+    {id:'软骨内骨骼', cost:8, req:['脊索'], envs:[{e:'浅海',v:5},{e:'深海',v:5}], exc:'内骨骼', desc:'游动敏捷+25%'},
+    {id:'几丁质外骨骼', cost:6, req:['分节附肢'], envs:[{e:'沼泽',v:5},{e:'平原',v:3}], exc:'内骨骼', desc:'物理防御+25%'},
+    {id:'翅基原基', cost:8, req:['分节附肢'], envs:[{e:'平原',v:3}], exc:'中空骨骼', desc:'解锁飞行可能'},
+    {id:'体内受精', cost:8, req:['组织分化'], envs:[{e:'沼泽',v:3},{e:'平原',v:3}], exc:'', desc:'提升后代存活'},
+    {id:'体外受精', cost:0, req:['组织分化'], envs:[{e:'浅海',v:3}], exc:'体内受精', desc:'基础繁殖'},
+    {id:'脊椎眼', cost:8, req:['脊索'], envs:[{e:'平原',v:3},{e:'丘陵',v:3}], exc:'复眼', desc:'视觉基础'},
+    {id:'复眼', cost:5, req:['分节附肢'], envs:[{e:'沼泽',v:3}], exc:'脊椎眼', desc:'节肢视觉'},
+    {id:'化学感受器', cost:0, req:['组织分化'], envs:[{e:'浅海',v:3}], exc:'', desc:'化学感知'},
+    {id:'变温', cost:0, req:['组织分化'], envs:[], exc:'恒温', desc:'基础体温调节'},
+    {id:'群体免疫', cost:8, req:['体内受精'], envs:[{e:'平原',v:5}], exc:'', desc:'抵抗疾病'},
+    {id:'抗压凝胶', cost:10, req:['软骨内骨骼'], envs:[{e:'深海',v:15}], exc:'', desc:'深海适应+50%'},
+    {id:'巨型体躯', cost:15, req:['内骨骼'], envs:[{e:'平原',v:15}], exc:'中空骨骼', desc:'体型翻倍，种群+40%，能耗+80%'},
+    {id:'中空骨骼', cost:8, req:['内骨骼'], envs:[{e:'平原',v:5}], exc:'巨型体躯', desc:'体重-30%，飞行敏捷+25%'},
+    {id:'光学隐形', cost:15, req:['色素细胞','低代谢'], envs:[{e:'森林',v:15}], exc:'', desc:'隐蔽+90%'},
+    {id:'迁徙本能', cost:6, req:['脑部分化'], envs:[{e:'平原',v:5}], exc:'', desc:'迁徙损耗-25%，自动迁徙概率+20%'},
+    {id:'远洋航行', cost:8, req:['脊索','鳍褶'], envs:[{e:'浅海',v:10},{e:'深海',v:10}], exc:'', desc:'迁徙损耗-40%，海域迁徙成功率+50%'}
+];
+
+// -------------------- 成就系统 --------------------
+var ACHIEVE_TIERS = { bronze:{label:'铜',icon:'🥉'}, silver:{label:'银',icon:'🥈'}, gold:{label:'金',icon:'🥇'}, platinum:{label:'白金',icon:'💎'} };
+var ACHIEVEMENT_DB = [
+    {id:'first_steps', name:'初出茅庐', desc:'存活10回合', tier:'bronze', icon:'🐣', check:function(g){return g.turn>=10}, reward:{gp:3} },
+    {id:'survivor', name:'生存专家', desc:'存活40回合', tier:'silver', icon:'🏅', check:function(g){return g.turn>=40}, reward:{gp:8} },
+    {id:'immortal', name:'不朽传奇', desc:'存活100回合', tier:'gold', icon:'🌟', check:function(g){return g.turn>=100}, reward:{gp:15} },
+    {id:'resilient', name:'韧性传奇', desc:'最低种群>5且存活50回合', tier:'gold', icon:'🛡️', check:function(g){return g.popMgr.getMinTotal()>=5 && g.turn>=50}, reward:{gp:12} },
+    {id:'small_scale', name:'小有规模', desc:'种群达到30', tier:'bronze', icon:'🌱', check:function(g){return g.popMgr.getTotal()>=30}, reward:{gp:3} },
+    {id:'flourish', name:'繁荣昌盛', desc:'种群达到80', tier:'silver', icon:'🌾', check:function(g){return g.popMgr.getTotal()>=80}, reward:{gp:8} },
+    {id:'mega_pop', name:'超级帝国', desc:'种群达到200', tier:'gold', icon:'👑', check:function(g){return g.popMgr.getTotal()>=200}, reward:{gp:15} },
+    {id:'wide_dist', name:'分布广泛', desc:'占据10个格子', tier:'silver', icon:'🗺️', check:function(g){return g.popMgr.distribution.size>=10}, reward:{gp:8} },
+    {id:'ubiquitous', name:'无处不在', desc:'占据20个格子', tier:'gold', icon:'🌍', check:function(g){return g.popMgr.distribution.size>=20}, reward:{gp:15} },
+    {id:'foundation', name:'基础奠基', desc:'解锁5个性状', tier:'bronze', icon:'🧩', check:function(g){return g.owned.size>=5}, reward:{gp:3} },
+    {id:'diversity', name:'多样进化', desc:'解锁12个性状', tier:'silver', icon:'🌈', check:function(g){return g.owned.size>=12}, reward:{gp:8} },
+    {id:'evolution_master', name:'进化大师', desc:'解锁20个性状', tier:'gold', icon:'🧬', check:function(g){return g.owned.size>=20}, reward:{gp:15} },
+    {id:'intelligent', name:'智慧萌芽', desc:'解锁自我意识', tier:'gold', icon:'🧠', check:function(g){return g.owned.has('自我意识')}, reward:{gp:12} },
+    {id:'warm_blood', name:'热血动物', desc:'同时拥有恒温和毛皮覆盖', tier:'silver', icon:'🔥', check:function(g){return g.owned.has('恒温')&&g.owned.has('毛皮覆盖')}, reward:{gp:8} },
+    {id:'land_master', name:'陆地霸主', desc:'同时拥有直立行走和硬壳卵', tier:'gold', icon:'🦬', check:function(g){return g.owned.has('直立行走')&&g.owned.has('硬壳卵')}, reward:{gp:12} },
+    {id:'aerial', name:'征服天空', desc:'进化出动力飞行', tier:'gold', icon:'🦅', check:function(g){return g.owned.has('动力飞行')}, reward:{gp:10} },
+    {id:'route_titan', name:'泰坦巨兽·霸主', desc:'解锁终极巨兽且种群>30', tier:'silver', icon:'🦖', check:function(g){return g.route==='titan'&&g.owned.has('终极巨兽')&&g.popMgr.getTotal()>=30}, reward:{gp:10} },
+    {id:'route_swarm', name:'虫群天灾·洪流', desc:'种群>100且拥有虫巢意志', tier:'silver', icon:'🐜', check:function(g){return g.route==='swarm'&&g.popMgr.getTotal()>=100&&g.owned.has('虫巢意志')}, reward:{gp:10} },
+    {id:'route_abyss', name:'深渊利维坦·深渊之主', desc:'拥有深海之王', tier:'silver', icon:'🐙', check:function(g){return g.route==='abyss'&&g.owned.has('深海之王')}, reward:{gp:10} },
+    {id:'route_sky', name:'天空主宰·制空权', desc:'拥有天空霸主', tier:'silver', icon:'🦅', check:function(g){return g.route==='sky'&&g.owned.has('天空霸主')}, reward:{gp:10} },
+    {id:'route_plague', name:'瘟疫化身·操控', desc:'拥有完美宿主', tier:'silver', icon:'🦠', check:function(g){return g.route==='plague'&&g.owned.has('完美宿主')}, reward:{gp:10} },
+    {id:'route_reef', name:'盖亚礁体·扩张', desc:'拥有生态改造', tier:'silver', icon:'🪸', check:function(g){return g.route==='reef'&&g.owned.has('生态改造')}, reward:{gp:10} },
+    {id:'route_sage', name:'智人文明·启蒙', desc:'拥有文明之光', tier:'silver', icon:'🧠', check:function(g){return g.route==='sage'&&g.owned.has('文明之光')}, reward:{gp:10} },
+    {id:'route_ghost', name:'幽灵幻象·无形', desc:'拥有虚空行者', tier:'silver', icon:'👻', check:function(g){return g.route==='ghost'&&g.owned.has('虚空行者')}, reward:{gp:10} },
+    {id:'route_master', name:'生态位大师', desc:'解锁12个以上路线专属性状', tier:'gold', icon:'🌿', check:function(g){var rd=ROUTES[g.route];if(!rd)return false;var rt=[];for(var sn in rd.systems){for(var tr of rd.systems[sn].traits){rt.push(tr.id);}}var cnt=0;for(var i=0;i<rt.length;i++){if(g.owned.has(rt[i]))cnt++;}return cnt>=12&&g.turn>=30;}, reward:{gp:20} },
+    {id:'extinct_survivor', name:'灭绝幸存者', desc:'经历一次大灭绝后种群>10', tier:'silver', icon:'💪', check:function(g){return g.extinctSurvived===true}, reward:{gp:15} },
+    {id:'extinct_killer', name:'灭绝克星', desc:'经历所有大灭绝且存活', tier:'platinum', icon:'👑', check:function(g){var all=['devonian','permian','triassic','cretaceous'];for(var i=0;i<all.length;i++){if(!g.extinctTriggered.has(all[i]))return false;}return g.popMgr.getTotal()>0;}, reward:{gp:30} },
+    {id:'extinct_reborn', name:'逆境重生', desc:'大灭绝后种群恢复速度+50%', tier:'gold', icon:'🔥', check:function(g){return g.extinctTriggered.size>0&&g.popMgr.getTotal()>=30}, reward:{gp:18} },
+    {id:'minimalist', name:'极简主义', desc:'通关时拥有少于12个性状', tier:'gold', icon:'✨', check:function(g){return g.turn>=50&&g.owned.size<12}, reward:{gp:15} },
+    {id:'nomad', name:'游牧民族', desc:'迁徙超过15次', tier:'silver', icon:'🐫', check:function(g){return g.migrateCount>=15}, reward:{gp:8} },
+    {id:'immune', name:'百毒不侵', desc:'进化出群体免疫', tier:'gold', icon:'🛡️', check:function(g){return g.owned.has('群体免疫')}, reward:{gp:12} },
+    {id:'super_adapt', name:'超级适应', desc:'在3个不同地形适应度>60', tier:'platinum', icon:'🌐', check:function(g){var ts={};var cells=g.popMgr.getOccupiedCells();for(var i=0;i<cells.length;i++){var c=g.map.getCell(cells[i].q,cells[i].r);var a=calculateAdaptation(c,g.owned);if(a>=60)ts[c.terrain]=true;}var cnt=0;for(var t in ts)cnt++;return cnt>=3;}, reward:{gp:25} },
+    {id:'perfectionist', name:'完美主义', desc:'解锁全部32个成就', tier:'platinum', icon:'🏆', check:function(g){var all=ACHIEVEMENT_DB.map(function(a){return a.id;});for(var i=0;i<all.length;i++){if(!g.achieve.has(all[i]))return false;}return true;}, reward:{gp:50} }
+];
+
+var AchievementManager = {
+    _toastTimer:null,
+    checkAll:function(g){
+        var newly=[];
+        for(var i=0;i<ACHIEVEMENT_DB.length;i++){
+            var a=ACHIEVEMENT_DB[i];
+            if(g.achieve.has(a.id)) continue;
+            try{
+                if(a.check(g)){
+                    g.achieve.add(a.id);
+                    newly.push(a);
+                    if(a.reward && a.reward.gp){
+                        g.gp = (g.gp||0) + a.reward.gp;
+                        addLog('🏆 达成成就【'+a.name+'】奖励 '+a.reward.gp+' GP！','good');
+                    } else {
+                        addLog('🏆 达成成就【'+a.name+'】！','good');
+                    }
+                }
+            }catch(e){}
+        }
+        if(newly.length>0){
+            this.showToast(newly[newly.length-1]);
+            updateUI();
+            renderMap();
+        }
+        return newly;
+    },
+    showToast:function(ach){
+        var tierInfo=ACHIEVE_TIERS[ach.tier]||ACHIEVE_TIERS.bronze;
+        var toast=document.getElementById('achieve-toast');
+        document.getElementById('toast-tier').textContent=tierInfo.icon+' '+tierInfo.label;
+        document.getElementById('toast-name').textContent=ach.icon+' '+ach.name;
+        document.getElementById('toast-desc').textContent=ach.desc+(ach.reward?' | 奖励: +'+ach.reward.gp+' GP':'');
+        toast.classList.add('show');
+        clearTimeout(this._toastTimer);
+        this._toastTimer=setTimeout(function(){toast.classList.remove('show');},4000);
+    },
+    getUnlockedCount:function(g){var c=0;for(var i=0;i<ACHIEVEMENT_DB.length;i++){if(g.achieve.has(ACHIEVEMENT_DB[i].id))c++;}return c;},
+    render:function(g,containerId){
+        var container=document.getElementById(containerId);
+        if(!container)return;
+        var html='',unlocked=0,total=ACHIEVEMENT_DB.length;
+        for(var i=0;i<total;i++){
+            var a=ACHIEVEMENT_DB[i];
+            var done=g.achieve.has(a.id);
+            if(done)unlocked++;
+            var tierInfo=ACHIEVE_TIERS[a.tier]||ACHIEVE_TIERS.bronze;
+            var cls=done?'achieve-item unlocked':'achieve-item locked';
+            var rewardStr=a.reward?' 🎁+'+a.reward.gp:'';
+            html+='<div class="'+cls+'">';
+            html+='<span class="icon">'+(done?'✅':'⬜')+'</span>';
+            html+='<span class="tier-badge '+a.tier+'">'+tierInfo.icon+'</span>';
+            html+='<div class="info"><span class="name">'+a.icon+' '+a.name+'</span>';
+            html+='<div class="desc">'+a.desc+rewardStr+'</div></div></div>';
+        }
+        container.innerHTML=html;
+        document.getElementById('ach-count').textContent=unlocked+' / '+total;
+    },
+    renderEndScreen:function(g){
+        var container=document.getElementById('end-achieve');
+        if(!container)return;
+        var html='',unlocked=0;
+        for(var i=0;i<ACHIEVEMENT_DB.length;i++){
+            var a=ACHIEVEMENT_DB[i];
+            var done=g.achieve.has(a.id);
+            if(done)unlocked++;
+            var tierInfo=ACHIEVE_TIERS[a.tier]||ACHIEVE_TIERS.bronze;
+            var cls=done?'ach done':'ach locked';
+            html+='<div class="'+cls+'"><span class="atier '+a.tier+'">'+tierInfo.icon+'</span>';
+            html+='<span>'+(done?'✅':'⬜')+' '+a.icon+' '+a.name+' — '+a.desc;
+            if(done&&a.reward)html+=' 🎁+'+a.reward.gp;
+            html+='</span></div>';
+        }
+        container.innerHTML=html;
+        document.getElementById('end-ach-count').textContent=unlocked;
+        document.getElementById('end-ach-summary').textContent='🏆 解锁 '+unlocked+'/'+ACHIEVEMENT_DB.length+' 个成就';
+    }
+};
+
+// -------------------- 工具类（噪声/六边形） --------------------
+class ValueNoise {
+    constructor(seed){this.seed=seed||42; this.perm=new Uint8Array(512); var p=new Uint8Array(256); for(var i=0;i<256;i++)p[i]=i; var s=this.seed; for(var i=255;i>=0;i--){s=(s*16807+0)%2147483647; var j=s%(i+1); var tmp=p[i]; p[i]=p[j]; p[j]=tmp;} for(var i=0;i<512;i++)this.perm[i]=p[i&255];}
+    fade(t){return t*t*t*(t*(t*6-15)+10);}
+    lerp(a,b,t){return a+t*(b-a);}
+    grad(hash,x,y){var h=hash&3; var u=h<2?x:y; var v=h<2?y:x; return ((h&1)?-u:u)+((h&2)?-v:v);}
+    noise(x,y){var X=Math.floor(x)&255,Y=Math.floor(y)&255; var xf=x-Math.floor(x),yf=y-Math.floor(y); var u=this.fade(xf),v=this.fade(yf); var p=this.perm; var a=p[X]+Y,b=p[X+1]+Y; return this.lerp(this.lerp(this.grad(p[a],xf,yf),this.grad(p[b],xf-1,yf),u),this.lerp(this.grad(p[a+1],xf,yf-1),this.grad(p[b+1],xf-1,yf-1),u),v);}
+    fbm(x,y,octaves,lacunarity,gain){octaves=octaves||4; lacunarity=lacunarity||2.0; gain=gain||0.5; var value=0,amplitude=1,frequency=1,maxVal=0; for(var i=0;i<octaves;i++){value+=amplitude*this.noise(x*frequency,y*frequency); maxVal+=amplitude; amplitude*=gain; frequency*=lacunarity;} return value/maxVal;}
+}
+
+var HEX_DIRS=[[1,0],[1,-1],[0,-1],[-1,0],[-1,1],[0,1]];
+function hexNeighbor(q,r,dir,W,H){var nq=q+HEX_DIRS[dir][0],nr=r+HEX_DIRS[dir][1]; nq=((nq%W)+W)%W; nr=((nr%H)+H)%H; return [nq,nr];}
+function hexToPixel(q,r,size){return {x: size*(Math.sqrt(3)*q+Math.sqrt(3)/2*r), y: size*(3/2*r)};}
+function hexCorner(cx,cy,size,i){var ang=Math.PI/180*(60*i-30); return {x:cx+size*Math.cos(ang), y:cy+size*Math.sin(ang)};}
+
+// -------------------- 地形生成 --------------------
+class TerrainGenerator {
+    constructor(seed,mapW,mapH){this.noise=new ValueNoise(seed); this.W=mapW; this.H=mapH; this.seed=seed; this.cache={};}
+    generateCell(q,r,geoAge){
+        var key=q+','+r; if(this.cache[key])return this.cache[key];
+        var n=this.noise; var fx=q/this.W,fy=r/this.H;
+        var elev=n.fbm(fx*2.5+1.3, fy*2.5+0.7, 6, 2.1, 0.55);
+        var seaLevelOffset=Math.sin(geoAge/100)*0.3+0.2*Math.cos(geoAge/70);
+        var seaLevel=seaLevelOffset*200;
+        elev=elev*3000+seaLevel;
+        var latFactor=Math.cos((r/this.H)*Math.PI-Math.PI/2);
+        var temp=latFactor*25+15; temp-=(elev>0?elev/200:0);
+        var globalTemp=2*Math.sin(geoAge/150)+2*Math.cos(geoAge/300)+1; temp+=globalTemp;
+        temp+=n.noise(fx*3+5.7, fy*3+9.1)*5; temp=Math.max(-30,Math.min(50,temp));
+        var distToSea=Math.abs(elev+200)/2500; var hum=0.7-distToSea*0.5; if(temp>30)hum-=0.2; if(temp<-5)hum+=0.1; hum+=n.noise(fx*2+3.3,fy*2+7.7)*0.15; hum=Math.max(0,Math.min(1,hum));
+        var baseO2=21+10*Math.sin(geoAge/80)+5*Math.cos(geoAge/120); var o2=baseO2+n.noise(fx*1.5+11,fy*1.5+13)*3;
+        var veg=this._calcVegetation(temp,hum,elev,geoAge); o2+=veg*0.1; o2=Math.max(10,Math.min(35,o2));
+        var sal=35; if(elev<-200)sal=35+n.noise(fx*4+17,fy*4+19)*3; else if(elev<0)sal=30+n.noise(fx*3+23,fy*3+29)*5; else sal=5+n.noise(fx*2+31,fy*2+37)*10; sal=Math.max(0,Math.min(45,sal));
+        var vegVal=this._calcVegetation(temp,hum,elev,geoAge);
+        var terrain=this._determineTerrain(elev,temp,hum,geoAge);
+        var riches=this._calcRiches(terrain,vegVal,o2,sal);
+        var cell={q:q,r:r,elevation:Math.round(elev),temperature:Math.round(temp*10)/10,humidity:Math.round(hum*100),oxygen:Math.round(o2*10)/10,salinity:Math.round(sal*10)/10,vegetation:Math.round(vegVal*100),terrain:terrain,riches:riches,population:0,adaptation:0};
+        this.cache[key]=cell; return cell;
+    }
+    _calcVegetation(temp,hum,elev,geoAge){var v=0.5; if(temp>0&&temp<35)v+=0.3; else v-=0.2; if(hum>0.3&&hum<0.9)v+=0.3; else v-=0.2; if(elev<2000&&elev>-100)v+=0.2; else if(elev>2000)v-=0.3; if(temp<-10||temp>40)v-=0.4; if(hum<0.1)v-=0.3; if(geoAge>400)v*=0.2; else if(geoAge>350)v*=0.5; return Math.max(0,Math.min(1,v));}
+    _determineTerrain(elev,temp,hum,geoAge){if(elev<-2000)return'深海'; if(elev<-200)return'浅海'; if(elev<0)return'滩涂'; if(geoAge>400){if(elev<100)return'平原'; if(elev<500)return'丘陵'; if(elev<1500)return'高山草甸'; if(temp<-5)return'冰川'; return'高山荒漠';}else{if(elev<100){if(hum>0.7)return'沼泽'; return'平原';} if(elev<500){if(temp>20&&hum<0.4)return'稀树草原'; if(hum>0.6)return'森林'; return'丘陵';} if(elev<1500){if(hum>0.5)return'山地森林'; return'高山草甸';} if(temp<-5)return'冰川'; return'高山荒漠';}}
+    _calcRiches(terrain,veg,o2,sal){var map={'深海':20,'浅海':70,'滩涂':60,'沼泽':80,'平原':75,'稀树草原':65,'森林':90,'丘陵':60,'山地森林':70,'高山草甸':40,'冰川':10,'高山荒漠':15}; var base=map[terrain]||50; base+=veg*30; if(o2>28)base*=1.2; if(o2<15)base*=0.7; if(sal>38||sal<3)base*=0.6; return Math.round(Math.max(1,base));}
+}
+
+// -------------------- 地图管理器 --------------------
+class HexMap {
+    constructor(W,H,seed){this.W=W; this.H=H; this.seed=seed||42; this.terrainGen=new TerrainGenerator(seed,W,H); this.cells=new Map(); this.geoAge=538;}
+    getCell(q,r){var nq=((q%this.W)+this.W)%this.W; var nr=((r%this.H)+this.H)%this.H; var key=nq+','+nr; if(!this.cells.has(key)){var cell=this.terrainGen.generateCell(nq,nr,this.geoAge); this.cells.set(key,cell);} return this.cells.get(key);}
+    setGeoAge(age){this.geoAge=age; this.terrainGen.cache={}; this.cells.clear();}
+    getNeighbors(q,r){var result=[]; for(var d=0;d<6;d++){var n=hexNeighbor(q,r,d,this.W,this.H); result.push(this.getCell(n[0],n[1]));} return result;}
+    getAllCells(){var result=[]; for(var q=0;q<this.W;q++){for(var r=0;r<this.H;r++){result.push(this.getCell(q,r));}} return result;}
+    findFirstTerrain(terrain){for(var q=0;q<this.W;q++){for(var r=0;r<this.H;r++){if(this.getCell(q,r).terrain===terrain)return {q:q,r:r};}} return null;}
+}
+
+// -------------------- 种群管理 --------------------
+class PopulationManager {
+    constructor(){this.distribution=new Map(); this.total=0; this.minTotal=Infinity;}
+    setCell(q,r,pop){var key=q+','+r; if(pop<=0)this.distribution.delete(key); else this.distribution.set(key,Math.round(pop)); this._recalcTotal();}
+    addCell(q,r,pop){var key=q+','+r; var current=this.distribution.get(key)||0; var newVal=current+pop; if(newVal<=0)this.distribution.delete(key); else this.distribution.set(key,Math.round(newVal)); this._recalcTotal();}
+    getCell(q,r){return this.distribution.get(q+','+r)||0;}
+    getTotal(){return this.total;}
+    getMinTotal(){return this.minTotal;}
+    _recalcTotal(){var sum=0; for(var v of this.distribution.values())sum+=v; this.total=sum; if(sum<this.minTotal)this.minTotal=sum;}
+    getOccupiedCells(){var result=[]; for(var entry of this.distribution){var key=entry[0],pop=entry[1]; if(pop>0){var parts=key.split(',').map(Number); result.push({q:parts[0],r:parts[1],pop:pop});}} return result;}
+    migrate(fromQ,fromR,toQ,toR,amount,lossRate){var fromKey=fromQ+','+fromR; var fromPop=this.distribution.get(fromKey)||0; if(fromPop<amount||amount<=0)return false; var loss=Math.floor(amount*lossRate); var arrived=amount-loss; if(arrived<=0)arrived=1; var newFrom=fromPop-amount; if(newFrom<=0)this.distribution.delete(fromKey); else this.distribution.set(fromKey,Math.round(newFrom)); this.addCell(toQ,toR,arrived); this._recalcTotal(); return {loss:loss,arrived:arrived};}
+    clear(){this.distribution.clear(); this.total=0; this.minTotal=Infinity;}
+    initAt(q,r,pop){this.clear(); this.setCell(q,r,pop); this.minTotal=pop;}
+    serialize(){var obj={}; for(var entry of this.distribution){obj[entry[0]]=entry[1];} return {dist:obj,total:this.total,minTotal:this.minTotal};}
+    deserialize(data){this.distribution.clear(); for(var k in data.dist)this.distribution.set(k,data.dist[k]); this.total=data.total; this.minTotal=data.minTotal;}
+}
+
+// -------------------- Camera --------------------
+var Camera={
+    offsetX:0, offsetY:0, zoom:1, minZoom:0.2, maxZoom:4.0,
+    isDragging:false, dragStartX:0, dragStartY:0, dragStartOffX:0, dragStartOffY:0,
+    _userZoom:1, _userOffsetX:0, _userOffsetY:0,
+    worldToScreen:function(wx,wy){return {x:wx*this.zoom+this.offsetX, y:wy*this.zoom+this.offsetY};},
+    screenToWorld:function(sx,sy){return {x:(sx-this.offsetX)/this.zoom, y:(sy-this.offsetY)/this.zoom};},
+    reset:function(){this.offsetX=0; this.offsetY=0; this.zoom=1; this._userZoom=1; this._userOffsetX=0; this._userOffsetY=0;},
+    fitToMap:function(mapW,mapH,containerW,containerH,preserveUserZoom){
+        var baseSize=28; var totalW=baseSize*Math.sqrt(3)*mapW; var totalH=baseSize*1.5*mapH;
+        var zx=containerW/(totalW+40); var zy=containerH/(totalH+40); var fitZoom=Math.min(zx,zy,1.2);
+        fitZoom=Math.max(this.minZoom,Math.min(this.maxZoom,fitZoom));
+        if(preserveUserZoom && this._userZoom>0.01){this.zoom=Math.max(this.minZoom,Math.min(this.maxZoom,this._userZoom)); this.offsetX=containerW/2-(totalW*this.zoom)/2; this.offsetY=containerH/2-(totalH*this.zoom)/2; this.offsetX+=this._userOffsetX; this.offsetY+=this._userOffsetY;}else{this.zoom=fitZoom; this.offsetX=containerW/2-(totalW*this.zoom)/2; this.offsetY=containerH/2-(totalH*this.zoom)/2; this._userZoom=this.zoom; this._userOffsetX=0; this._userOffsetY=0;}
+    },
+    saveUserZoom:function(){this._userZoom=this.zoom; this._userOffsetX=this.offsetX; this._userOffsetY=this.offsetY;}
+};
+
+// -------------------- 游戏全局状态 --------------------
+var G={
+    r:0.05, gp:25, owned:new Set(), turn:1, speciesName:'原始生命',
+    achieve:new Set(), pendingDegen:null,
+    map:null, popMgr:null, selectedQ:0, selectedR:0,
+    totalTurns:100, geoAge:538, logs:[],
+    migrateSource:null, migrateCount:0,
+    mapW:24, mapH:16, seed:42, diff:2, route:'sage', routeName:'智人文明',
+    envTemp:15, envO2:21, envSeaLevel:0,
+    extinctActive:false, extinctCountdown:0, extinctSurvived:false,
+    extinctTriggered:new Set(), extinctAdaptPenalty:0
+};
+
+var INITIAL_TRAITS=['真核细胞','多细胞聚合','组织分化','化学感受器','体外受精','变温'];
+var DIFFICULTY={1:{r:0.07,gp:35,pop:12},2:{r:0.05,gp:25,pop:9},3:{r:0.035,gp:18,pop:6},4:{r:0.025,gp:12,pop:4}};
+var TERRAIN_FERTILITY={'深海':15,'浅海':45,'滩涂':40,'沼泽':55,'平原':70,'稀树草原':50,'森林':65,'丘陵':55,'山地森林':40,'高山草甸':30,'冰川':5,'高山荒漠':10};
+var RANDOM_EVENTS=[
+    {name:'火山喷发', effect:function(pm,map){if(Math.random()<0.3){var cells=pm.getOccupiedCells(); if(cells.length===0)return'火山喷发，但种群已无存。'; var cell=cells[Math.floor(Math.random()*cells.length)]; var loss=Math.max(1,Math.floor(cell.pop*0.15)); pm.addCell(cell.q,cell.r,-loss); return'火山喷发！某地种群减少'+loss+'。';} return'火山喷发，影响轻微。';}},
+    {name:'疾病流行', effect:function(pm,map){var immune=G.owned.has('群体免疫')?0.3:1; var cells=pm.getOccupiedCells(); if(cells.length===0)return'疾病流行，但种群已无存。'; var cell=cells[Math.floor(Math.random()*cells.length)]; var loss=Math.max(2,Math.floor(cell.pop*0.15*immune)); pm.addCell(cell.q,cell.r,-loss); return G.owned.has('群体免疫')?'疾病流行！群体免疫大幅减轻损失，减少'+loss+'。':'疾病流行！免疫系统不足，减少'+loss+'。';}},
+    {name:'食物丰饶', effect:function(pm,map){var cells=pm.getOccupiedCells(); if(cells.length===0)return'食物丰饶，但种群已无存。'; var cell=cells[Math.floor(Math.random()*cells.length)]; var bonus=Math.max(2,Math.floor(cell.pop*0.2)); pm.addCell(cell.q,cell.r,bonus); return'食物大丰饶！某地种群额外增长'+bonus+'。';}},
+    {name:'海平面变化', effect:function(pm,map){var cells=pm.getOccupiedCells(); var affected=0; for(var occ of cells){var cell=map.getCell(occ.q,occ.r); if(cell.terrain==='浅海'){var loss=Math.max(1,Math.floor(occ.pop*0.1)); pm.addCell(occ.q,occ.r,-loss); affected++;}} return affected>0?'海平面变化，浅海栖息地萎缩！':'海平面变化，对当前种群影响不大。';}},
+    {name:'陨石雨', effect:function(pm,map){var cells=pm.getOccupiedCells(); if(cells.length===0)return'陨石雨，但种群已无存。'; var cell=cells[Math.floor(Math.random()*cells.length)]; var loss=Math.max(1,Math.floor(cell.pop*0.08)); pm.addCell(cell.q,cell.r,-loss); return'陨石雨造成局部破坏。';}},
+    {name:'物种入侵', effect:function(pm,map){var cells=pm.getOccupiedCells(); if(cells.length===0)return'物种入侵，但种群已无存。'; var cell=cells[Math.floor(Math.random()*cells.length)]; var loss=Math.max(1,Math.floor(cell.pop*0.12)); pm.addCell(cell.q,cell.r,-loss); return'外来物种入侵！某地种群减少'+loss+'。';}}
+];
+var MASS_EXTINCTIONS=[
+    {id:'devonian', turn:12, name:'晚泥盆世大灭绝', icon:'🌊', msg:'晚泥盆世大灭绝降临！全球变冷，海洋大面积缺氧。', effect:{popLoss:0.60, adaptPenalty:25, tempChange:-4, duration:3}},
+    {id:'permian', turn:28, name:'二叠纪末大灭绝', icon:'🌋', msg:'二叠纪末大灭绝！地球史上最惨烈的灭绝事件，90%的物种消失。', effect:{popLoss:0.80, adaptPenalty:35, tempChange:+8, duration:4}},
+    {id:'triassic', turn:42, name:'三叠纪末大灭绝', icon:'🔥', msg:'三叠纪末大灭绝！泛大陆裂解，火山活动频繁。', effect:{popLoss:0.65, adaptPenalty:30, tempChange:+5, duration:3}},
+    {id:'cretaceous', turn:58, name:'白垩纪末大灭绝', icon:'☄️', msg:'白垩纪末大灭绝！陨石撞击地球，遮天蔽日。', effect:{popLoss:0.70, adaptPenalty:40, tempChange:0, duration:4}}
+];
+
+// -------------------- 核心函数 --------------------
+function getTrait(id){
+    for(var b of BASE_TRAITS){if(b.id===id)return b;}
+    var rd=ROUTES[G.route]; if(rd){for(var sn in rd.systems){for(var tr of rd.systems[sn].traits){if(tr.id===id)return tr;}}}
+    return null;
+}
+function has(id){return G.owned.has(id);}
+function canBuy(t){
+    if(G.gp<t.cost)return false;
+    for(var i=0;i<t.req.length;i++){if(!has(t.req[i]))return false;}
+    if(has(t.id))return false;
+    if(G.route && ROUTES[G.route] && ROUTES[G.route].locked.indexOf(t.id)!==-1)return false;
+    if(t.exc && has(t.exc))return false;
+    var rd=ROUTES[G.route]; if(rd){var found=false; for(var sn in rd.systems){for(var tr of rd.systems[sn].traits){if(tr.id===t.id){found=true;break;}} if(found)break;} if(!found){var isBase=false; for(var b of BASE_TRAITS){if(b.id===t.id){isBase=true;break;}} if(!isBase)return false;}}
+    return true;
+}
+function isLocked(t){
+    if(has(t.id))return false;
+    for(var i=0;i<t.req.length;i++){if(!has(t.req[i]))return true;}
+    if(G.route && ROUTES[G.route] && ROUTES[G.route].locked.indexOf(t.id)!==-1)return true;
+    if(t.exc && has(t.exc))return true;
+    return false;
+}
+function getAllDependents(id){
+    var deps=[];
+    for(var b of BASE_TRAITS){if(b.req.indexOf(id)!==-1 && G.owned.has(b.id))deps.push(b.id);}
+    var rd=ROUTES[G.route]; if(rd){for(var sn in rd.systems){for(var tr of rd.systems[sn].traits){if(tr.req.indexOf(id)!==-1 && G.owned.has(tr.id))deps.push(tr.id);}}}
+    return deps;
+}
+function buyTrait(id){
+    var t=getTrait(id); if(!t||has(id)||!canBuy(t))return;
+    G.gp-=t.cost; G.owned.add(id);
+    var bonusMsg='';
+    if(G.route==='titan' && id==='终极巨兽')bonusMsg='（泰坦终极：体型再翻倍！）';
+    if(G.route==='swarm' && id==='虫巢意志')bonusMsg='（虫群终极：全地图协调+100%）';
+    if(G.route==='abyss' && id==='深海之王')bonusMsg='（深渊终极：任何深度生存）';
+    if(G.route==='sky' && id==='天空霸主')bonusMsg='（天空终极：迁徙损耗-80%）';
+    if(G.route==='sage' && id==='文明之光')bonusMsg='（智人终极：知识+200%）';
+    addLog('进化出【'+id+'】！消耗 '+t.cost+' GP '+bonusMsg,'good');
+    checkAchievements(); updateUI(); renderMap(); autoSave();
+}
+function degenTrait(id){
+    var t=getTrait(id); if(!t||!has(id))return;
+    var deps=getAllDependents(id);
+    var refund=Math.floor(t.cost*0.5);
+    G.gp+=refund; G.owned.delete(id);
+    for(var d of deps)G.owned.delete(d);
+    var log='退化【'+id+'】，返还 '+refund+' GP';
+    if(deps.length)log+='，连带移除：'+deps.join('、');
+    addLog(log,'mut');
+    checkAchievements(); updateUI(); renderMap(); autoSave();
+}
+function calculateAdaptation(cell,ownedSet){
+    if(!cell)return 0;
+    var base=cell.riches*0.3+20;
+    var terrainScore={'深海':10,'浅海':30,'滩涂':25,'沼泽':40,'平原':60,'稀树草原':45,'森林':55,'丘陵':50,'山地森林':35,'高山草甸':25,'冰川':5,'高山荒漠':5};
+    base+=(terrainScore[cell.terrain]||30)*0.4;
+    if(G.route==='abyss' && (cell.terrain==='深海'||cell.terrain==='浅海'))base+=30;
+    if(G.route==='abyss' && cell.terrain!=='深海'&&cell.terrain!=='浅海')base-=40;
+    if(G.route==='sky')base+=15;
+    if(G.route==='sage')base+=10;
+    if(G.route==='reef' && (cell.terrain==='浅海'||cell.terrain==='滩涂'))base+=25;
+    if(G.route==='reef' && cell.terrain==='深海')base-=50;
+    if(G.route==='ghost')base+=20;
+    for(var id of ownedSet){var t=getTrait(id); if(t){for(var ei=0;ei<t.envs.length;ei++){var env=t.envs[ei]; if(env.e===cell.terrain)base+=env.v*0.8; if(env.e==='浅海' && (cell.terrain==='浅海'||cell.terrain==='深海'))base+=env.v*0.6; if(env.e==='干旱内陆' && (cell.terrain==='稀树草原'||cell.terrain==='高山荒漠'))base+=env.v*0.7; if(env.e==='冰原' && cell.terrain==='冰川')base+=env.v*1.2;}}}
+    var env=getEnvironmentForTurn(G.turn);
+    var tempDiff=Math.abs(env.temp-20); if(tempDiff>5)base-=tempDiff*0.8;
+    var o2Diff=Math.abs(env.o2-23); if(o2Diff>3)base-=o2Diff*1.2;
+    var upkeep=0; if(ownedSet.has('恒温'))upkeep+=3; if(ownedSet.has('巨型体躯'))upkeep+=5; if(ownedSet.has('飞行'))upkeep+=2; if(ownedSet.has('脑部分化'))upkeep+=1; if(ownedSet.has('自我意识'))upkeep+=2; if(ownedSet.has('终极巨兽'))upkeep+=8; if(G.route==='sky')upkeep+=2; if(G.route==='sage')upkeep+=3; if(G.route==='titan')upkeep+=4; base-=upkeep*1.5;
+    if(G.extinctActive)base-=25; if(G.extinctAdaptPenalty>0)base-=G.extinctAdaptPenalty;
+    return Math.max(0,Math.min(100,Math.round(base)));
+}
+function simulatePopulationGrowth(cell,adapt,fertility){
+    var base=TERRAIN_FERTILITY[cell.terrain]||30;
+    var resource=base*(0.5+adapt/200);
+    var upkeep=0; if(G.owned.has('恒温'))upkeep+=3; if(G.owned.has('巨型体躯'))upkeep+=5; if(G.owned.has('飞行'))upkeep+=2; if(G.owned.has('脑部分化'))upkeep+=1; if(G.owned.has('自我意识'))upkeep+=2; if(G.owned.has('终极巨兽'))upkeep+=8; if(G.owned.has('文明之光'))upkeep+=5; if(G.route==='sky')upkeep+=2; if(G.route==='sage')upkeep+=3; if(G.route==='titan')upkeep+=4;
+    var densityPenalty=Math.max(0,(cell.population-20)*0.02);
+    var change=(resource-upkeep)*0.04*(adapt/100)-densityPenalty;
+    if(G.extinctActive)change-=0.05*cell.population;
+    change=Math.max(-cell.population*0.15, Math.min(cell.population*0.12, change));
+    return Math.round(change);
+}
+function getFertilityForTurn(turn){if(turn===3||turn===18||turn===28)return 0; if(turn<3)return 3; if(turn<8)return 2; if(turn<16)return 3; if(turn<18)return 1; if(turn<28)return 2; if(turn<32)return 2; if(turn<45)return 3; if(turn<60)return 2; if(turn<75)return 1; if(turn<90)return 2; return 3;}
+function getGeoAgeForTurn(turn,totalTurns){totalTurns=totalTurns||100; var startAge=538; var endAge=0; var progress=(turn-1)/(totalTurns-1); return startAge-(startAge-endAge)*progress;}
+function getEnvironmentForTurn(turn){var age=getGeoAgeForTurn(turn,G.totalTurns); var temp=15+2*Math.sin(age/150)+2*Math.cos(age/300)+1; var o2=21+10*Math.sin(age/80)+5*Math.cos(age/120); var seaLevel=0+30*Math.sin(age/100)+20*Math.cos(age/70); temp=Math.max(-5,Math.min(35,temp)); o2=Math.max(12,Math.min(32,o2)); return {temp:Math.round(temp),o2:Math.round(o2),seaLevel:Math.round(seaLevel)};}
+function getMigrationLossRate(){var baseLoss=0.30; var reduction=0; var traits=Array.from(G.owned); for(var id of traits){if(id==='飞行')reduction+=0.50; if(id==='远洋航行')reduction+=0.40; if(id==='迁徙本能')reduction+=0.25; if(id==='耐力奔跑')reduction+=0.15; if(id==='流线体型')reduction+=0.20; if(id==='对握趾')reduction+=0.10; if(id==='滑翔')reduction+=0.15; if(id==='长距离迁徙')reduction+=0.20; if(id==='空间导航')reduction+=0.15; if(id==='磁感导航')reduction+=0.10; if(id==='随风飘散')reduction+=0.25; if(id==='天空霸主')reduction+=0.80; if(id==='文明之光')reduction+=0.20; if(id==='虚空行者')reduction+=0.30;} if(G.route==='sky')reduction+=0.50; var lossRate=Math.max(0.05,baseLoss-reduction); return Math.min(0.95,lossRate);}
+function getAutoMigrateChance(){var base=0.05; var bonus=0; var traits=Array.from(G.owned); for(var id of traits){if(id==='飞行')bonus+=0.15; if(id==='远洋航行')bonus+=0.10; if(id==='迁徙本能')bonus+=0.20; if(id==='耐力奔跑')bonus+=0.08; if(id==='流线体型')bonus+=0.08; if(id==='长距离迁徙')bonus+=0.15; if(id==='空间导航')bonus+=0.10; if(id==='天空霸主')bonus+=0.25; if(id==='虫巢意志')bonus+=0.15; if(id==='文明之光')bonus+=0.10; if(id==='虚空行者')bonus+=0.10;} if(G.route==='sky')bonus+=0.15; if(G.route==='swarm')bonus+=0.10; return Math.min(0.80,base+bonus);}
+function checkVictoryConditions(){var totalPop=G.popMgr.getTotal(); var distCount=G.popMgr.distribution.size; var totalCells=G.mapW*G.mapH; if(distCount>=totalCells*0.6){addLog('🏆 统治胜利！你的物种遍布世界每个角落。','good'); return true;} if(G.owned.has('自我意识')&&totalPop>200){addLog('🧠 智慧胜利！你发展出了自我意识，创造了文明。','good'); return true;} if(totalPop>500){addLog('🌟 繁盛胜利！种群突破500，成为地球霸主。','good'); return true;} return false;}
+function checkMassExtinction(){for(var me of MASS_EXTINCTIONS){if(G.extinctTriggered.has(me.id))continue; if(G.turn===me.turn){G.extinctTriggered.add(me.id); G.extinctActive=true; G.extinctCountdown=me.effect.duration||3; G.extinctAdaptPenalty=me.effect.adaptPenalty||0; showExtinctModal(me.icon+' '+me.name, me.msg+'\n\n影响：种群-'+Math.round(me.effect.popLoss*100)+'% | 适应惩罚-'+me.effect.adaptPenalty+'% | 温度变化'+(me.effect.tempChange>0?'+':'')+me.effect.tempChange+'°C\n持续 '+me.effect.duration+' 回合', me.icon); showExtinctBanner(me.name,me.icon); var totalPop=G.popMgr.getTotal(); var loss=Math.floor(totalPop*me.effect.popLoss); var cells=G.popMgr.getOccupiedCells(); for(var occ of cells){var cellLoss=Math.min(occ.pop, Math.floor(occ.pop*me.effect.popLoss)); G.popMgr.addCell(occ.q,occ.r,-cellLoss);} addLog('💀 '+me.name+'降临！种群大幅衰减！','bad'); if(G.popMgr.getTotal()>10){G.extinctSurvived=true; addLog('🌟 你的种群在'+me.name+'中幸存下来！','good');} checkAchievements(); updateUI(); renderMap(); autoSave(); return true;}} return false;}
+function showExtinctBanner(name,icon){var container=document.getElementById('extinct-banner-container'); var banner=document.createElement('div'); banner.className='mass-extinct-banner'; banner.innerHTML=icon+' '+name+'<div class="sub">大灭绝 · 种群遭受重创</div>'; container.appendChild(banner); setTimeout(function(){if(banner.parentNode)banner.remove();},4000);}
+function performTurn(){
+    if(G.turn>G.totalTurns)return;
+    var env=getEnvironmentForTurn(G.turn); G.envTemp=env.temp; G.envO2=env.o2; G.envSeaLevel=env.seaLevel;
+    checkMassExtinction();
+    var map=G.map, popMgr=G.popMgr;
+    var fertility=getFertilityForTurn(G.turn);
+    var changes=[]; var occupied=popMgr.getOccupiedCells();
+    for(var occ of occupied){var cell=map.getCell(occ.q,occ.r); var adapt=calculateAdaptation(cell,G.owned); cell.adaptation=adapt; var change=simulatePopulationGrowth(cell,adapt,fertility); changes.push({q:occ.q,r:occ.r,change:change,adapt:adapt});}
+    for(var ch of changes){if(ch.change<0)popMgr.addCell(ch.q,ch.r,ch.change);}
+    for(var ch of changes){if(ch.change>0)popMgr.addCell(ch.q,ch.r,ch.change);}
+    var autoChance=getAutoMigrateChance();
+    if(Math.random()<autoChance && !G.extinctActive){
+        var occCells=popMgr.getOccupiedCells(); if(occCells.length>0){var src=occCells[Math.floor(Math.random()*occCells.length)]; var neighbors=map.getNeighbors(src.q,src.r); var candidates=[]; for(var n of neighbors){var adapt=calculateAdaptation(n,G.owned); if(adapt>=30 && popMgr.getCell(n.q,n.r)===0)candidates.push({q:n.q,r:n.r,adapt:adapt});} if(candidates.length>0){candidates.sort(function(a,b){return b.adapt-a.adapt;}); var target=candidates[0]; var amount=Math.max(1,Math.floor(src.pop*0.08)); var lossRate=getMigrationLossRate()*0.5; var result=popMgr.migrate(src.q,src.r,target.q,target.r,amount,lossRate); if(result){addLog('🔄 自动扩散：'+result.arrived+' 个体从 ('+src.q+','+src.r+') 迁往 ('+target.q+','+target.r+')（损耗'+result.loss+'）','warn');}}}
+    }
+    var spreadList=popMgr.getOccupiedCells();
+    for(var occ of spreadList){var cell=map.getCell(occ.q,occ.r); var cap=cell.riches*0.6+10; if(occ.pop>cap){var overflow=Math.floor((occ.pop-cap)*0.25); if(overflow>0){var neighbors=map.getNeighbors(occ.q,occ.r); var best=null,bestAdapt=-1; for(var n of neighbors){var a=calculateAdaptation(n,G.owned); if(a>bestAdapt&&a>=15){bestAdapt=a; best=n;}} if(best){var lossRate=getMigrationLossRate()*0.7; var result=popMgr.migrate(occ.q,occ.r,best.q,best.r,overflow,lossRate); if(result){addLog('📤 超载扩散：'+result.arrived+' 个体迁往 ('+best.q+','+best.r+')（损耗'+result.loss+'）','info');}}}}}
+    if(Math.random()<0.2 && !G.extinctActive){var evt=RANDOM_EVENTS[Math.floor(Math.random()*RANDOM_EVENTS.length)]; var msg=evt.effect(popMgr,map); addLog('🎲 '+msg,'warn');}
+    var totalPop=popMgr.getTotal(); var distCount=popMgr.distribution.size;
+    var baseIncome=totalPop*0.02+distCount*0.3+1;
+    var totalAdapt=0,adaptCount=0; var occCells=popMgr.getOccupiedCells(); for(var occ of occCells){var cell=map.getCell(occ.q,occ.r); totalAdapt+=(cell.adaptation||50); adaptCount++;} var avgAdapt=adaptCount>0?totalAdapt/adaptCount:50; var adaptMod=0.3+avgAdapt/100; var tempMod=1-Math.abs(env.temp-20)*0.02; tempMod=Math.max(0.4,Math.min(1.2,tempMod)); var grossIncome=Math.floor(baseIncome*adaptMod*tempMod); grossIncome=Math.max(1,grossIncome); var maintenance=Math.floor(totalPop*0.008+distCount*0.15); maintenance=Math.min(maintenance,Math.floor(grossIncome*0.7)); var netIncome=grossIncome-maintenance; G.gp+=netIncome; if(G.gp<0)G.gp=0;
+    addLog('💰 基因收入：毛 '+grossIncome+' - 维护 '+maintenance+' = 净 '+netIncome+' GP','info');
+    if(popMgr.getTotal()<=0){addLog('💀 你的种群已经灭绝！','bad'); gameOver(false); return;}
+    if(G.extinctActive){G.extinctCountdown--; if(G.extinctCountdown<=0){G.extinctActive=false; G.extinctAdaptPenalty=0; addLog('🌱 大灭绝结束，生命开始复苏。','info');}}
+    G.turn++;
+    if(G.turn>G.totalTurns){if(checkVictoryConditions())gameOver(true); else gameOver(true); return;}
+    G.geoAge=getGeoAgeForTurn(G.turn,G.totalTurns); map.setGeoAge(G.geoAge);
+    if(checkVictoryConditions()){gameOver(true); return;}
+    checkAchievements(); updateUI(); renderMap(); autoSave();
+}
+
+// -------------------- UI 更新 --------------------
+function updateUI(){
+    var total=G.popMgr.getTotal();
+    document.getElementById('s-pop').textContent=total;
+    document.getElementById('s-gp').textContent=G.gp;
+    document.getElementById('s-route').textContent=G.routeName;
+    var era=getEraName(G.geoAge); document.getElementById('era-tag').textContent=era;
+    // 【修复1】右上角不再重复显示 /100
+    document.getElementById('turn-num').textContent = G.turn;
+    document.getElementById('total-turns').textContent = G.totalTurns;
+    var env=getEnvironmentForTurn(G.turn);
+    var tempEl=document.getElementById('env-temp'); tempEl.textContent='🌡️ '+env.temp+'°C'; tempEl.className='env-badge '+(env.temp>25?'temp-hot':env.temp<5?'temp-cold':'temp-mid');
+    var o2El=document.getElementById('env-o2'); o2El.textContent='💨 O₂ '+env.o2+'%'; o2El.className='env-badge';
+    document.getElementById('env-sea-level').textContent='🌊 '+env.seaLevel+'m';
+    var extinctEl=document.getElementById('env-extinct');
+    var nextExtinct=null; for(var me of MASS_EXTINCTIONS){if(!G.extinctTriggered.has(me.id)&&me.turn>G.turn){if(!nextExtinct||me.turn<nextExtinct.turn)nextExtinct=me;}}
+    if(nextExtinct && nextExtinct.turn-G.turn<=5){extinctEl.style.display='inline'; extinctEl.textContent='💀 '+nextExtinct.name+' 倒计时 '+(nextExtinct.turn-G.turn)+'回合';}
+    else if(G.extinctActive){extinctEl.style.display='inline'; extinctEl.textContent='💀 大灭绝进行中 ('+G.extinctCountdown+'回合)';}
+    else extinctEl.style.display='none';
+    var selCell=G.map.getCell(G.selectedQ,G.selectedR);
+    var adapt=calculateAdaptation(selCell,G.owned);
+    var adaptDisplay=Math.round(adapt);
+    var bar=document.getElementById('s-bar'); bar.style.width=Math.min(adapt,100)+'%'; bar.className=adapt>=60?'good':adapt>=30?'mid':'bad';
+    document.getElementById('s-adapt-num').textContent=adaptDisplay+'%';
+    var txt='基础适应'; if(adapt>=60)txt='高度适应 🌟'; else if(adapt>=30)txt='基本适应'; else if(adapt>=10)txt='适应不良 ⚠️'; else if(adapt>0)txt='极度危险 💀'; else txt='生态位缺失 ❌';
+    document.getElementById('s-adapt-text').textContent=txt;
+    // 【修复2】更新地块信息面板
+    updateCellInfo(selCell);
+    renderOwned();
+    renderEvolve();
+    AchievementManager.render(G,'achieve-grid');
+    checkDeadlock();
+}
+// 【修复2】地块信息更新函数
+function updateCellInfo(cell){
+    if(!cell){ document.getElementById('ci-terrain').textContent='—'; document.getElementById('ci-temp').textContent='—'; document.getElementById('ci-humidity').textContent='—'; document.getElementById('ci-o2').textContent='—'; document.getElementById('ci-salinity').textContent='—'; document.getElementById('ci-riches').textContent='—'; document.getElementById('ci-pop').textContent='0'; return; }
+    var terrainEl=document.getElementById('ci-terrain');
+    terrainEl.textContent=cell.terrain||'—';
+    var cls='ci-value terrain-tag';
+    var t=cell.terrain||'';
+    if(t==='深海'||t==='浅海'||t==='滩涂')cls+=' sea';
+    else if(t==='沼泽')cls+=' swamp';
+    else if(t==='平原'||t==='稀树草原'||t==='高山荒漠')cls+=' desert';
+    else if(t==='冰川'||t==='高山草甸')cls+=' ice';
+    else cls+=' plain';
+    terrainEl.className=cls;
+    document.getElementById('ci-temp').textContent=(cell.temperature||0)+'°C';
+    document.getElementById('ci-humidity').textContent=(cell.humidity||0)+'%';
+    document.getElementById('ci-o2').textContent=(cell.oxygen||0)+'%';
+    document.getElementById('ci-salinity').textContent=(cell.salinity||0)+'‰';
+    document.getElementById('ci-riches').textContent=(cell.riches||0);
+    var pop=G.popMgr.getCell(cell.q,cell.r)||0;
+    document.getElementById('ci-pop').textContent=pop;
+}
+function renderOwned(){
+    var container=document.getElementById('s-owned');
+    var html='';
+    var allTraits=BASE_TRAITS.slice();
+    var rd=ROUTES[G.route]; if(rd){for(var sn in rd.systems){for(var tr of rd.systems[sn].traits){allTraits.push(tr);}}}
+    var sysMap={};
+    for(var t of allTraits){if(G.owned.has(t.id)){var sysName='其他'; if(rd){for(var sn in rd.systems){for(var tr of rd.systems[sn].traits){if(tr.id===t.id){sysName=sn; break;}} if(sysName!=='其他')break;}} if(sysName==='其他'){for(var b of BASE_TRAITS){if(b.id===t.id){sysName='基础'; break;}}} if(!sysMap[sysName])sysMap[sysName]=[]; sysMap[sysName].push(t);}}
+    for(var sn in sysMap){var items=sysMap[sn]; html+='<div class="sys-group"><div class="sys-name">'+sn+'</div><div class="sys-tags">'; for(var t of items){var isRouteLocked=false; if(G.route&&ROUTES[G.route]&&ROUTES[G.route].locked.indexOf(t.id)!==-1)isRouteLocked=true; var cls=isRouteLocked?'tag active route-locked':'tag active'; html+='<span class="'+cls+'" data-trait="'+t.id+'">'+t.id+(isRouteLocked?' 🌟':'')+'</span>';} html+='</div></div>';}
+    if(!html)html='<div class="sys-group"><span class="tag empty">无</span></div>';
+    container.innerHTML=html;
+}
+function renderEvolve(){
+    var container=document.getElementById('evolve-panels');
+    var route=ROUTES[G.route]; if(!route){container.innerHTML='<div style="color:var(--dim);text-align:center;padding:1rem;">请选择一条生态位路线</div>'; return;}
+    var html='';
+    html+='<div class="route-banner"><div class="r-title"><span class="icon">'+route.icon+'</span> '+route.name+' <span style="font-size:.5rem;color:var(--dim);font-weight:400">生态位路线</span></div>';
+    html+='<div class="r-desc">'+route.desc+'</div><div class="r-bonus">✨ '+route.bonus+'</div>';
+    if(route.locked&&route.locked.length){html+='<div class="r-lock">🚫 路线排斥：'+route.locked.map(function(id){return '<span class="badge">'+id+'</span>';}).join('')+'</div>';}
+    html+='</div>';
+    var allTraits=[]; for(var b of BASE_TRAITS){allTraits.push({trait:b,group:'基础架构',depth:0});}
+    for(var sysName in route.systems){var sys=route.systems[sysName]; for(var tr of sys.traits){allTraits.push({trait:tr,group:sysName,depth:1,note:sys.note||''});}}
+    for(var item of allTraits){var t=item.trait; var maxDepth=item.depth||0; for(var reqId of t.req){for(var other of allTraits){if(other.trait.id===reqId){maxDepth=Math.max(maxDepth,(other.depth||0)+1);}}} item._depth=Math.min(maxDepth,4); item._reqMet=true; for(var reqId of t.req){if(!G.owned.has(reqId)){item._reqMet=false; break;}}}
+    var groups=['基础架构']; for(var sysName in route.systems){if(sysName!=='终极')groups.push(sysName);} if(route.systems['终极'])groups.push('终极');
+    for(var g of groups){var items=allTraits.filter(function(item){return item.group===g;}); if(items.length===0)continue; var note='',branchType=''; if(route.systems[g]){note=route.systems[g].note||''; if(note.indexOf('二选一')!==-1)branchType='二选一'; else if(note.indexOf('三选一')!==-1)branchType='三选一'; else if(note.indexOf('锁定')!==-1)branchType='锁定';}
+    html+='<div class="tree-group-title">'+g+' <span class="note">'+note+'</span>'+(branchType?' <span class="branch-badge">'+branchType+'</span>':'')+'</div>';
+    html+='<div class="tree-container tree-root">'; items.sort(function(a,b){return (a._depth||0)-(b._depth||0);});
+    for(var item of items){var t=item.trait; var depth=Math.min(item._depth||0,4); var isLeaf=true; for(var other of allTraits){if(other.trait.req.indexOf(t.id)!==-1){isLeaf=false; break;}} var leafClass=isLeaf?' leaf':''; var hasExc=t.exc&&G.owned.has(t.exc); var excClass=hasExc?' exclusive':''; html+='<div class="tree-node tree-depth-'+depth+leafClass+excClass+'" data-trait="'+t.id+'">'; html+=renderTraitCardTree(t); html+='</div>';}
+    html+='</div>';}
+    container.innerHTML=html;
+    bindHoverHighlight(container);
+}
+function bindHoverHighlight(container){container.querySelectorAll('.trait-card').forEach(function(card){card.addEventListener('mouseenter',function(){var id=this.dataset.trait; if(!id)return; var t=getTrait(id); if(!t)return; var reqs=t.req||[]; container.querySelectorAll('.trait-card.highlight-req').forEach(function(el){el.classList.remove('highlight-req');}); for(var reqId of reqs){var reqCard=container.querySelector('.trait-card[data-trait="'+reqId+'"]'); if(reqCard)reqCard.classList.add('highlight-req');}}); card.addEventListener('mouseleave',function(){container.querySelectorAll('.trait-card.highlight-req').forEach(function(el){el.classList.remove('highlight-req');});});});}
+function renderTraitCardTree(t){
+    var owned=has(t.id), locked=isLocked(t), affordable=canBuy(t), routeLocked=false;
+    if(G.route&&ROUTES[G.route]&&ROUTES[G.route].locked.indexOf(t.id)!==-1)routeLocked=true;
+    var cls='trait-card'; if(owned)cls+=' owned'; else if(locked||routeLocked)cls+=' locked'; else if(affordable)cls+=' affordable'; if(routeLocked)cls+=' route-locked';
+    var isUltimate=(t.id==='终极巨兽'||t.id==='虫巢意志'||t.id==='深海之王'||t.id==='天空霸主'||t.id==='完美宿主'||t.id==='生态改造'||t.id==='文明之光'||t.id==='虚空行者');
+    if(isUltimate)cls+=' ultimate';
+    var envs=''; for(var ei=0;ei<t.envs.length;ei++){var e=t.envs[ei]; var c=e.v>0?(e.e==='浅海'||e.e==='深海'?'sea':e.e==='沼泽'?'swamp':e.e==='干旱内陆'||e.e==='平原'?'desert':'ice'):'bad'; envs+='<span class="'+c+'">'+(e.v>0?'+':'')+e.v+' '+e.e+'</span>';}
+    var preview=''; if(!owned&&!locked&&!routeLocked){var curAdapt=calculateAdaptation(G.map.getCell(G.selectedQ,G.selectedR),G.owned); var testOwned=new Set(G.owned); testOwned.add(t.id); var testAdapt=calculateAdaptation(G.map.getCell(G.selectedQ,G.selectedR),testOwned); var diff=testAdapt-curAdapt; preview='<div class="preview">适应度'+(diff>=0?'+':'')+diff+'%</div>';}
+    var lockLabel=''; if(routeLocked)lockLabel=' 🚫 路线排斥'; else if(locked){var reason=''; for(var i=0;i<t.req.length;i++){if(!has(t.req[i])){reason='需要 '+t.req[i]; break;}} if(!reason&&t.exc&&has(t.exc))reason='与 '+t.exc+' 互斥'; lockLabel=' 🔒 '+(reason||'未解锁');}
+    var excLabel=''; if(t.exc&&has(t.exc)){excLabel='<div class="exc-label">⚠️ 互斥：'+t.exc+'（已拥有）</div>';} else if(t.exc&&!has(t.exc)&&!locked){excLabel='<div class="exc-label" style="color:var(--dim);border-color:var(--dark);">↔ 与 '+t.exc+' 互斥</div>';}
+    var deps=''; if(!owned&&t.req.length){deps='<div class="req">前置：'+t.req.join('、')+'</div>';}
+    var desc=t.desc?'<div style="font-size:.4rem;color:var(--dim);margin-top:.05rem;">'+t.desc+'</div>':'';
+    var html='<div class="'+cls+'" data-trait="'+t.id+'">';
+    if(routeLocked){html+='<div class="lock-overlay"></div><div class="lock-label">路线排斥</div>';}
+    html+='<div class="name">'+t.id+(isUltimate?' 👑':'')+'</div>';
+    html+='<div class="cost">'+(owned?'✓ 已拥有':t.cost+' GP')+lockLabel+'</div>';
+    if(envs)html+='<div class="envs">'+envs+'</div>';
+    html+=deps+desc+excLabel+preview;
+    if(owned)html+='<div class="degen-tag">🧬 退化</div>';
+    html+='</div>';
+    return html;
+}
+function checkDeadlock(){var warnBox=document.getElementById('deadlock-warn'); var cell=G.map.getCell(G.selectedQ,G.selectedR); var adapt=calculateAdaptation(cell,G.owned); if(adapt<10&&G.popMgr.getTotal()>0){warnBox.innerHTML='⚠️ 当前格子适应度极低！考虑迁徙到更适合的区域。'; warnBox.className='warn-box show';} else warnBox.className='warn-box';}
+function getEraName(ageMa){if(ageMa>485)return'寒武纪'; if(ageMa>443)return'奥陶纪'; if(ageMa>419)return'志留纪'; if(ageMa>359)return'泥盆纪'; if(ageMa>299)return'石炭纪'; if(ageMa>252)return'二叠纪'; if(ageMa>201)return'三叠纪'; if(ageMa>145)return'侏罗纪'; if(ageMa>66)return'白垩纪'; if(ageMa>56)return'古新世'; if(ageMa>34)return'始新世'; if(ageMa>23)return'渐新世'; if(ageMa>2.6)return'中新世'; if(ageMa>0.01)return'更新世'; return'现代';}
+
+// -------------------- 地图渲染 --------------------
+function renderMap(){
+    var canvas=document.getElementById('map-canvas');
+    var rect=canvas.parentElement.getBoundingClientRect();
+    var dpr=window.devicePixelRatio||1;
+    var W=rect.width,H=rect.height;
+    canvas.width=W*dpr; canvas.height=H*dpr; canvas.style.width=W+'px'; canvas.style.height=H+'px';
+    var ctx=canvas.getContext('2d'); ctx.scale(dpr,dpr);
+    var mapW=G.map.W, mapH=G.map.H;
+    var baseSize=28, drawSize=baseSize*Camera.zoom;
+    if(Camera.offsetX===0&&Camera.offsetY===0&&Camera.zoom===1){Camera.fitToMap(mapW,mapH,W,H,false); Camera.saveUserZoom();}
+    ctx.clearRect(0,0,W,H);
+    var margin=drawSize*3;
+    var topLeft=Camera.screenToWorld(-margin,-margin);
+    var bottomRight=Camera.screenToWorld(W+margin,H+margin);
+    var qMin=Math.floor(topLeft.x/(baseSize*Math.sqrt(3)))-6;
+    var qMax=Math.ceil(bottomRight.x/(baseSize*Math.sqrt(3)))+6;
+    var rMin=Math.floor(topLeft.y/(baseSize*1.5))-6;
+    var rMax=Math.ceil(bottomRight.y/(baseSize*1.5))+6;
+    var drawList=[];
+    for(var dq=qMin;dq<=qMax;dq++){for(var dr=rMin;dr<=rMax;dr++){var q=((dq%mapW)+mapW)%mapW; var r=((dr%mapH)+mapH)%mapH; var pixelPos=hexToPixel(dq,dr,baseSize); var screenPos=Camera.worldToScreen(pixelPos.x,pixelPos.y); var cx=screenPos.x,cy=screenPos.y; if(cx<-drawSize*2||cx>W+drawSize*2||cy<-drawSize*2||cy>H+drawSize*2)continue; var cell=G.map.getCell(q,r); var pop=G.popMgr.getCell(q,r); drawList.push({q:q,r:r,dq:dq,dr:dr,cx:cx,cy:cy,cell:cell,pop:pop});}}
+    for(var item of drawList){var cx=item.cx,cy=item.cy,cell=item.cell,pop=item.pop; ctx.beginPath(); for(var i=0;i<6;i++){var corner=hexCorner(cx,cy,drawSize,i); if(i===0)ctx.moveTo(corner.x,corner.y); else ctx.lineTo(corner.x,corner.y);} ctx.closePath(); ctx.fillStyle=getTerrainColor(cell); ctx.fill(); ctx.strokeStyle='rgba(255,255,255,0.04)'; ctx.lineWidth=0.5; ctx.stroke(); if(G.extinctActive){ctx.beginPath(); for(var i=0;i<6;i++){var corner=hexCorner(cx,cy,drawSize,i); if(i===0)ctx.moveTo(corner.x,corner.y); else ctx.lineTo(corner.x,corner.y);} ctx.closePath(); ctx.fillStyle='rgba(220,38,38,0.12)'; ctx.fill();}
+        // 【修复3】种群显示：所有 pop>0 都显示数字，且透明度合理
+        if(pop>0){
+            var alpha = Math.max(0.25, Math.min(pop/25, 0.75));
+            ctx.beginPath();
+            for(var i=0;i<6;i++){var corner=hexCorner(cx,cy,drawSize*0.6,i); if(i===0)ctx.moveTo(corner.x,corner.y); else ctx.lineTo(corner.x,corner.y);}
+            ctx.closePath();
+            ctx.fillStyle='rgba(46,204,113,'+alpha+')';
+            ctx.fill();
+            // 所有 pop>0 都显示数字
+            var fontSize = pop<3 ? Math.min(drawSize*0.35, 9) : Math.min(drawSize*0.45, 12);
+            ctx.fillStyle='rgba(255,255,255,0.92)';
+            ctx.font=fontSize+'px sans-serif';
+            ctx.textAlign='center';
+            ctx.textBaseline='middle';
+            ctx.fillText(Math.round(pop),cx,cy+0.5);
+        }
+        if(item.dq===G.selectedQ&&item.dr===G.selectedR){ctx.beginPath(); for(var i=0;i<6;i++){var corner=hexCorner(cx,cy,drawSize+2,i); if(i===0)ctx.moveTo(corner.x,corner.y); else ctx.lineTo(corner.x,corner.y);} ctx.closePath(); ctx.strokeStyle='rgba(46,204,113,0.8)'; ctx.lineWidth=2.5; ctx.stroke();}
+    }
+    if(G.migrateSource){var src=G.migrateSource; var pixelPos=hexToPixel(src.q,src.r,baseSize); var screenPos=Camera.worldToScreen(pixelPos.x,pixelPos.y); ctx.beginPath(); ctx.arc(screenPos.x,screenPos.y,drawSize*0.4,0,Math.PI*2); ctx.fillStyle='rgba(241,196,15,0.25)'; ctx.fill(); ctx.strokeStyle='rgba(241,196,15,0.8)'; ctx.lineWidth=2; ctx.stroke(); ctx.fillStyle='rgba(255,255,255,0.9)'; ctx.font=Math.min(drawSize*0.4,12)+'px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('🚀',screenPos.x,screenPos.y+0.5);}
+    var total=G.popMgr.getTotal(); var occ=G.popMgr.distribution.size;
+    ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(6,6,160,20); ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.font='9px sans-serif'; ctx.textAlign='left'; ctx.textBaseline='middle'; ctx.fillText('🐚 '+total+'  占格 '+occ+'  缩放 '+Math.round(Camera.zoom*100)+'%',10,16);
+    if(G.route){ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.fillRect(W-130,6,124,18); ctx.fillStyle='rgba(155,89,182,0.8)'; ctx.font='9px sans-serif'; ctx.textAlign='right'; ctx.textBaseline='middle'; ctx.fillText('🧬 '+ROUTES[G.route].icon+' '+ROUTES[G.route].name,W-10,16);}
+}
+function getTerrainColor(cell){var colors={'深海':'#0a1628','浅海':'#1a3a6a','滩涂':'#3a7a3a','沼泽':'#2d5a1a','平原':'#5a8a3a','稀树草原':'#8aaa4a','森林':'#1a5a1a','丘陵':'#7a8a5a','山地森林':'#2a5a3a','高山草甸':'#8aaa7a','冰川':'#c8e8f0','高山荒漠':'#8a7a5a'}; return colors[cell.terrain]||'#333';}
+
+// -------------------- 辅助函数 --------------------
+function addLog(text,type){G.logs.push({text:text,type:type||'info',turn:G.turn}); var list=document.getElementById('l-list'); if(list){var d=document.createElement('div'); d.className='log-item '+(type||'info'); d.innerHTML='<span class="turn-num">[第'+G.turn+'回合]</span> '+text; list.appendChild(d); list.scrollTop=list.scrollHeight;}}
+function showExtinctModal(title,text,icon){document.getElementById('extinct-icon').textContent=icon||'💀'; document.getElementById('extinct-title').textContent=title; document.getElementById('extinct-text').textContent=text; document.getElementById('extinct-modal').classList.add('show');}
+function closeExtinctModal(){document.getElementById('extinct-modal').classList.remove('show');}
+function focusOnCell(q,r){var baseSize=28; var pixelPos=hexToPixel(q,r,baseSize); var container=document.getElementById('map-container'); var rect=container.getBoundingClientRect(); var cx=rect.width/2,cy=rect.height/2; Camera.offsetX=cx-pixelPos.x*Camera.zoom; Camera.offsetY=cy-pixelPos.y*Camera.zoom; Camera.saveUserZoom(); G.selectedQ=q; G.selectedR=r; renderMap();}
+function showMigrateModal(fromQ,fromR,toQ,toR,maxAmount){if(maxAmount<=0){addLog('❌ 源格已无种群可迁徙。','bad'); G.migrateSource=null; document.getElementById('migrate-hint').classList.remove('show'); renderMap(); return;} var lossRate=getMigrationLossRate(); var lossPercent=Math.round(lossRate*100); document.getElementById('migrate-info').innerHTML='从 ('+fromQ+','+fromR+') 到 ('+toQ+','+toR+')，可迁徙：<span id="migrate-max">'+maxAmount+'</span>'; document.getElementById('migrate-loss-info').textContent='🔄 迁徙损耗率：'+lossPercent+'%（到达数量 = 派出数量 × '+(1-lossRate).toFixed(2)+'）'; var input=document.getElementById('migrate-amount'); input.value=Math.min(maxAmount,1); input.max=maxAmount; input.min=1; document.getElementById('migrate-modal').dataset.fromQ=fromQ; document.getElementById('migrate-modal').dataset.fromR=fromR; document.getElementById('migrate-modal').dataset.toQ=toQ; document.getElementById('migrate-modal').dataset.toR=toR; document.getElementById('migrate-modal').classList.add('show');}
+function closeMigrateModal(){document.getElementById('migrate-modal').classList.remove('show'); G.migrateSource=null; document.getElementById('migrate-hint').classList.remove('show'); renderMap();}
+function showDegenModal(name,cost,deps){G.pendingDegen=name; var txt='退化【'+name+'】将返还 '+cost+' GP'; if(deps.length)txt+='，连带移除：'+deps.join('、'); txt+='。退化是应对环境变化的策略。'; document.getElementById('d-text').textContent=txt; document.getElementById('degen-modal').classList.add('show');}
+function closeDegenModal(){G.pendingDegen=null; document.getElementById('degen-modal').classList.remove('show');}
+function checkAchievements(){AchievementManager.checkAll(G);}
+
+// -------------------- 存档 --------------------
+function autoSave(){try{var data=serializeGame(); localStorage.setItem('evolution_autosave',JSON.stringify(data));}catch(e){}}
+function serializeGame(){var ownedArr=Array.from(G.owned); var achieveArr=Array.from(G.achieve); var logsArr=G.logs.map(function(l){return {text:l.text,type:l.type,turn:l.turn};}); return {version:5,r:G.r,gp:G.gp,owned:ownedArr,turn:G.turn,speciesName:G.speciesName,achieve:achieveArr,selectedQ:G.selectedQ,selectedR:G.selectedR,totalTurns:G.totalTurns,geoAge:G.geoAge,logs:logsArr,migrateCount:G.migrateCount||0,mapW:G.mapW,mapH:G.mapH,seed:G.seed,diff:G.diff,route:G.route,routeName:G.routeName,extinctActive:G.extinctActive,extinctCountdown:G.extinctCountdown,extinctSurvived:G.extinctSurvived,extinctTriggered:Array.from(G.extinctTriggered),popData:G.popMgr.serialize(),camera:{offsetX:Camera.offsetX,offsetY:Camera.offsetY,zoom:Camera.zoom,_userZoom:Camera._userZoom,_userOffsetX:Camera._userOffsetX,_userOffsetY:Camera._userOffsetY}};}
+function deserializeGame(data){G.r=data.r; G.gp=data.gp; G.owned=new Set(data.owned||[]); G.turn=data.turn||1; G.speciesName=data.speciesName||'原始生命'; G.achieve=new Set(data.achieve||[]); G.selectedQ=data.selectedQ||0; G.selectedR=data.selectedR||0; G.totalTurns=data.totalTurns||100; G.geoAge=data.geoAge||538; G.logs=(data.logs||[]).map(function(l){return {text:l.text,type:l.type,turn:l.turn};}); G.migrateCount=data.migrateCount||0; G.mapW=data.mapW||24; G.mapH=data.mapH||16; G.seed=data.seed||42; G.diff=data.diff||2; G.route=data.route||'sage'; G.routeName=data.routeName||'智人文明'; G.extinctActive=data.extinctActive||false; G.extinctCountdown=data.extinctCountdown||0; G.extinctSurvived=data.extinctSurvived||false; G.extinctTriggered=new Set(data.extinctTriggered||[]); G.map=new HexMap(G.mapW,G.mapH,G.seed); G.map.setGeoAge(G.geoAge); G.popMgr=new PopulationManager(); if(data.popData){G.popMgr.deserialize(data.popData);} if(data.camera){Camera.offsetX=data.camera.offsetX||0; Camera.offsetY=data.camera.offsetY||0; Camera.zoom=data.camera.zoom||1; Camera._userZoom=data.camera._userZoom||Camera.zoom; Camera._userOffsetX=data.camera._userOffsetX||0; Camera._userOffsetY=data.camera._userOffsetY||0;} else Camera.reset(); var logList=document.getElementById('l-list'); if(logList){logList.innerHTML=''; for(var l of G.logs){var d=document.createElement('div'); d.className='log-item '+(l.type||'info'); d.innerHTML='<span class="turn-num">[第'+l.turn+'回合]</span> '+l.text; logList.appendChild(d);} logList.scrollTop=logList.scrollHeight;}}
+function saveGame(){try{var data=serializeGame(); localStorage.setItem('evolution_save',JSON.stringify(data)); addLog('💾 游戏已保存！','info'); var btn=document.getElementById('btn-save'); var orig=btn.textContent; btn.textContent='✅ 已保存'; setTimeout(function(){btn.textContent=orig;},1500);}catch(e){addLog('❌ 保存失败：'+e.message,'bad');}}
+function loadGame(){try{var raw=localStorage.getItem('evolution_save'); if(!raw){alert('没有找到存档。'); return false;} var data=JSON.parse(raw); if(!data.version||data.version<4){alert('存档版本过旧，请重新开始游戏。'); return false;} deserializeGame(data); document.getElementById('menu').style.display='none'; document.getElementById('topbar').style.display='flex'; document.getElementById('main-area').style.display='block'; document.getElementById('bottom-nav').style.display='flex'; document.getElementById('drawer').classList.add('open'); updateUI(); renderMap(); addLog('💾 存档读取成功！继续演化之旅。','info'); return true;}catch(e){alert('读取存档失败：'+e.message); return false;}}
+
+// -------------------- 游戏启动 --------------------
+function startGame(diff,routeId){
+    var s=DIFFICULTY[diff]; if(!s)s=DIFFICULTY[2];
+    G.r=s.r; G.gp=s.gp; G.owned=new Set(INITIAL_TRAITS);
+    G.turn=1; G.achieve=new Set(); G.speciesName=document.getElementById('species-name').value||'原始生命';
+    G.totalTurns=100; G.geoAge=538; G.migrateSource=null; G.migrateCount=0;
+    G.mapW=24; G.mapH=16; G.seed=Math.floor(Math.random()*100000); G.diff=diff; G.route=routeId||'sage';
+    G.routeName=ROUTES[G.route]?ROUTES[G.route].name:'智人文明';
+    G.extinctActive=false; G.extinctCountdown=0; G.extinctSurvived=false; G.extinctTriggered=new Set(); G.extinctAdaptPenalty=0;
+    var routeInit={titan:['真体腔','脊索','内骨骼'], swarm:['假体腔','分节附肢','几丁质外骨骼'], abyss:['真体腔','脊索','软骨内骨骼'], sky:['真体腔','脊索','内骨骼'], plague:['假体腔','体壁简化'], reef:['真体腔','水沟系统'], sage:['真体腔','脊索','内骨骼'], ghost:['假体腔','微型化']};
+    if(routeInit[G.route]){for(var t of routeInit[G.route]){if(!G.owned.has(t))G.owned.add(t);}}
+    var mapW=G.mapW,mapH=G.mapH;
+    G.map=new HexMap(mapW,mapH,G.seed); G.map.setGeoAge(G.geoAge);
+    G.popMgr=new PopulationManager();
+    var startPos=G.map.findFirstTerrain('浅海'); if(!startPos)startPos=G.map.findFirstTerrain('深海'); if(!startPos)startPos=G.map.findFirstTerrain('平原'); if(!startPos)startPos={q:Math.floor(mapW/2),r:Math.floor(mapH/2)};
+    G.popMgr.initAt(startPos.q,startPos.r,s.pop);
+    G.selectedQ=startPos.q; G.selectedR=startPos.r;
+    document.getElementById('menu').style.display='none';
+    document.getElementById('topbar').style.display='flex';
+    document.getElementById('main-area').style.display='block';
+    document.getElementById('bottom-nav').style.display='flex';
+    document.getElementById('drawer').classList.add('open');
+    var logList=document.getElementById('l-list');
+    if(logList){logList.innerHTML='<div class="log-item info"><span class="turn-num">[开局]</span> 【'+G.speciesName+'】诞生于六边形世界的 '+G.map.getCell(startPos.q,startPos.r).terrain+'。种群'+s.pop+'，基因点'+s.gp+'。\n🌿 生态位路线：'+ROUTES[G.route].icon+' '+ROUTES[G.route].name+' — '+ROUTES[G.route].desc+'\n✨ '+ROUTES[G.route].bonus+'\n🔄 迁徙损耗已启用，后期终极性状消耗大量GP！</div>';}
+    G.logs=[];
+    var container=document.getElementById('map-container');
+    var rect=container.getBoundingClientRect();
+    Camera.fitToMap(mapW,mapH,rect.width,rect.height,false);
+    Camera.saveUserZoom();
+    focusOnCell(startPos.q,startPos.r);
+    AchievementManager.checkAll(G);
+    updateUI();
+    renderMap();
+    autoSave();
+    var env=getEnvironmentForTurn(G.turn);
+    G.envTemp=env.temp; G.envO2=env.o2; G.envSeaLevel=env.seaLevel;
+    showFullscreenBtn();
+}
+function showFullscreenBtn(){document.getElementById('btn-evolve-fullscreen').style.display='flex';}
+function gameOver(win){
+    var endScreen=document.getElementById('end-screen');
+    endScreen.style.display='flex';
+    if(win){document.getElementById('end-icon').textContent='🎉'; document.getElementById('end-title').textContent='恭喜通关！'; document.getElementById('end-title').className='win'; document.getElementById('end-pop').textContent=G.popMgr.getTotal(); document.getElementById('end-turn').textContent=G.turn-1; document.getElementById('end-min').textContent=G.popMgr.getMinTotal(); var stars=[]; if(G.popMgr.getTotal()>=30)stars.push('⭐ 繁荣'); if(G.popMgr.getTotal()>=80)stars.push('⭐⭐ 昌盛'); if(G.popMgr.getTotal()>=150)stars.push('⭐⭐⭐ 兴旺'); if(G.popMgr.getMinTotal()>=5)stars.push('⭐⭐⭐⭐ 韧性传奇'); if(G.achieve.size>=6)stars.push('⭐⭐⭐⭐⭐ 进化大师'); if(G.extinctSurvived)stars.push('💪 灭绝幸存者'); if(G.achieve.has('route_master'))stars.push('🧬 生态位大师'); var ultimates=['终极巨兽','虫巢意志','深海之王','天空霸主','完美宿主','生态改造','文明之光','虚空行者']; var hasUlt=false; for(var u of ultimates){if(G.owned.has(u)){hasUlt=true; break;}} if(hasUlt)stars.push('👑 终极进化者'); document.getElementById('end-stars').innerHTML=stars.join('<br>')||'⭐ 勉强存活';}
+    else{document.getElementById('end-icon').textContent='💀'; document.getElementById('end-title').textContent='你的种群已经灭绝'; document.getElementById('end-title').className='lose'; document.getElementById('end-pop').textContent='0'; document.getElementById('end-turn').textContent=G.turn; document.getElementById('end-min').textContent=G.popMgr.getMinTotal(); document.getElementById('end-stars').innerHTML='也许下一次演化能做出更好的选择。';}
+    AchievementManager.renderEndScreen(G);
+}
+
+// -------------------- 事件绑定 --------------------
+document.addEventListener('DOMContentLoaded',function(){
+    document.querySelectorAll('.route-item').forEach(function(el){el.addEventListener('click',function(){document.querySelectorAll('.route-item').forEach(function(x){x.classList.remove('selected');}); this.classList.add('selected');});});
+    document.querySelector('.route-item[data-route="sage"]')?.classList.add('selected');
+    document.querySelectorAll('.diff-item').forEach(function(el){el.addEventListener('click',function(){document.querySelectorAll('.diff-item').forEach(function(x){x.classList.remove('selected');}); this.classList.add('selected');});});
+    document.querySelector('.diff-item[data-diff="2"]')?.classList.add('selected');
+    document.getElementById('btn-start').addEventListener('click',function(){var selDiff=document.querySelector('.diff-item.selected'); if(!selDiff){alert('请先选择一个难度！'); return;} var selRoute=document.querySelector('.route-item.selected'); if(!selRoute){alert('请先选择一条生态位路线！'); return;} startGame(parseInt(selDiff.dataset.diff),selRoute.dataset.route);});
+    document.getElementById('btn-rules').addEventListener('click',function(){document.getElementById('rules-modal').classList.add('show');});
+    document.getElementById('btn-hide-rules').addEventListener('click',function(){document.getElementById('rules-modal').classList.remove('show');});
+    document.getElementById('btn-save').addEventListener('click',saveGame);
+    document.getElementById('btn-load').addEventListener('click',function(){loadGame();});
+    document.getElementById('l-next').addEventListener('click',performTurn);
+
+    var navBtns=document.querySelectorAll('.nav-btn');
+    navBtns.forEach(function(btn,idx){btn.addEventListener('click',function(){navBtns.forEach(function(x){x.classList.remove('active');}); this.classList.add('active'); var tabs=document.querySelectorAll('#drawer-tabs .tab-btn'); tabs.forEach(function(t,i){t.classList.toggle('active',i===idx);}); document.querySelectorAll('#drawer .tab-pane').forEach(function(p,i){p.classList.toggle('active',i===idx);}); document.getElementById('drawer').classList.add('open');});});
+    document.querySelectorAll('#drawer-tabs .tab-btn').forEach(function(btn,idx){btn.addEventListener('click',function(){document.querySelectorAll('#drawer-tabs .tab-btn').forEach(function(x){x.classList.remove('active');}); this.classList.add('active'); document.querySelectorAll('#drawer .tab-pane').forEach(function(p,i){p.classList.toggle('active',i===idx);}); navBtns.forEach(function(b,i){b.classList.toggle('active',i===idx);});});});
+    document.getElementById('drawer-close').addEventListener('click',function(){document.getElementById('drawer').classList.remove('open'); navBtns.forEach(function(x){x.classList.remove('active');});});
+    document.getElementById('btn-confirm-degen').addEventListener('click',function(){if(G.pendingDegen){degenTrait(G.pendingDegen); closeDegenModal();}});
+    document.getElementById('btn-cancel-degen').addEventListener('click',closeDegenModal);
+    document.getElementById('btn-migrate-confirm').addEventListener('click',function(){var modal=document.getElementById('migrate-modal'); var fromQ=parseInt(modal.dataset.fromQ),fromR=parseInt(modal.dataset.fromR),toQ=parseInt(modal.dataset.toQ),toR=parseInt(modal.dataset.toR); var amount=parseInt(document.getElementById('migrate-amount').value)||1; var maxSpan=document.getElementById('migrate-max'); var max=parseInt(maxSpan.textContent)||0; if(max<=0){addLog('❌ 源格已无种群。','bad'); closeMigrateModal(); return;} if(amount<1)amount=1; if(amount>max)amount=max; var lossRate=getMigrationLossRate(); var result=G.popMgr.migrate(fromQ,fromR,toQ,toR,amount,lossRate); if(result){G.migrateCount=(G.migrateCount||0)+1; addLog('🚀 迁徙 '+amount+' 单位从 ('+fromQ+','+fromR+') 到 ('+toQ+','+toR+')，损耗 '+result.loss+'，到达 '+result.arrived,'good'); focusOnCell(toQ,toR); checkAchievements(); updateUI(); autoSave();}else{addLog('❌ 迁徙失败。','bad');} G.migrateSource=null; document.getElementById('migrate-hint').classList.remove('show'); closeMigrateModal();});
+    document.getElementById('btn-migrate-cancel').addEventListener('click',function(){G.migrateSource=null; document.getElementById('migrate-hint').classList.remove('show'); closeMigrateModal(); renderMap();});
+    document.getElementById('btn-extinct-continue').addEventListener('click',closeExtinctModal);
+    document.getElementById('s-owned').addEventListener('click',function(e){var tag=e.target.closest('.tag.active'); if(tag){var id=tag.dataset.trait; if(id&&has(id)){var t=getTrait(id); if(t){var deps=getAllDependents(id); showDegenModal(id,Math.floor(t.cost*0.5),deps);}}}});
+    document.getElementById('evolve-panels').addEventListener('click',function(e){var card=e.target.closest('.trait-card'); if(!card)return; var id=card.dataset.trait; if(!id)return; if(card.classList.contains('owned')){var t=getTrait(id); if(t){var deps=getAllDependents(id); showDegenModal(id,Math.floor(t.cost*0.5),deps);}} else if(!card.classList.contains('locked')&&!card.classList.contains('route-locked')){buyTrait(id);} else {addLog('❌ 该性状被路线排斥或未满足前置条件。','bad');}});
+
+    // 全屏进化视图
+    var btnFullscreen=document.getElementById('btn-evolve-fullscreen');
+    var overlay=document.getElementById('evolve-fullscreen-overlay');
+    var closeFullscreen=document.getElementById('evolve-fullscreen-close');
+    var bodyFullscreen=document.getElementById('evolve-fullscreen-body');
+    btnFullscreen.addEventListener('click',function(){var content=document.getElementById('evolve-panels').innerHTML; bodyFullscreen.innerHTML=content; overlay.classList.add('open'); bindEvolveClicks(bodyFullscreen);});
+    closeFullscreen.addEventListener('click',function(){overlay.classList.remove('open');});
+    overlay.addEventListener('click',function(e){if(e.target===overlay)overlay.classList.remove('open');});
+    document.addEventListener('keydown',function(e){if(e.key==='Escape'&&overlay.classList.contains('open')){overlay.classList.remove('open');}});
+    function bindEvolveClicks(container){container.querySelectorAll('.trait-card').forEach(function(card){card.addEventListener('click',function(e){var id=this.dataset.trait; if(!id)return; if(this.classList.contains('owned')){var t=getTrait(id); if(t){var deps=getAllDependents(id); showDegenModal(id,Math.floor(t.cost*0.5),deps);}} else if(!this.classList.contains('locked')&&!this.classList.contains('route-locked')){buyTrait(id);} else {addLog('❌ 该性状被路线排斥或未满足前置条件。','bad');}});});}
+
+    // 地图交互（点击、拖拽、缩放）
+    var canvas=document.getElementById('map-canvas');
+    canvas.addEventListener('click',function(e){if(Camera.isDragging)return; var rect=canvas.getBoundingClientRect(); var x=(e.clientX||(e.touches&&e.touches[0].clientX))-rect.left; var y=(e.clientY||(e.touches&&e.touches[0].clientY))-rect.top; var world=Camera.screenToWorld(x,y); var mapW=G.map.W,mapH=G.map.H; var baseSize=28; var drawSize=baseSize*Camera.zoom; var bestQ=-1,bestR=-1,bestDist=Infinity; var range=6; var centerQ=Math.round(world.x/(baseSize*Math.sqrt(3))); var centerR=Math.round(world.y/(baseSize*1.5)); for(var dq=-range;dq<=range;dq++){for(var dr=-range;dr<=range;dr++){var q=centerQ+dq; var r=centerR+dr; var pos=hexToPixel(q,r,baseSize); var dx=world.x-pos.x; var dy=world.y-pos.y; var dist=Math.sqrt(dx*dx+dy*dy); if(dist<bestDist){bestDist=dist; bestQ=q; bestR=r;}}} var tolerance=Math.max(drawSize*0.85,10); if(bestDist>tolerance)return; var clickedQ=((bestQ%mapW)+mapW)%mapW; var clickedR=((bestR%mapH)+mapH)%mapH; var pop=G.popMgr.getCell(clickedQ,clickedR); var hint=document.getElementById('migrate-hint'); if(G.migrateSource){var src=G.migrateSource; if(src.q===clickedQ&&src.r===clickedR){G.migrateSource=null; hint.classList.remove('show'); addLog('已取消迁徙选择。','info'); G.selectedQ=clickedQ; G.selectedR=clickedR; updateUI(); renderMap(); return;} var neighbors=G.map.getNeighbors(src.q,src.r); var isNeighbor=false; for(var n of neighbors){if(n.q===clickedQ&&n.r===clickedR){isNeighbor=true; break;}} if(isNeighbor){var maxAmount=G.popMgr.getCell(src.q,src.r); if(maxAmount>0){showMigrateModal(src.q,src.r,clickedQ,clickedR,maxAmount); return;} else {G.migrateSource=null; hint.classList.remove('show'); addLog('迁徙源已无种群，取消选择。','warn'); G.selectedQ=clickedQ; G.selectedR=clickedR; updateUI(); renderMap(); return;}} else {G.migrateSource=null; hint.classList.remove('show'); if(pop>0){G.migrateSource={q:clickedQ,r:clickedR}; hint.classList.add('show'); addLog('选中 ('+clickedQ+','+clickedR+') 作为迁徙源，点击相邻格为目标。','info');} else {addLog('已取消迁徙选择。','info');} G.selectedQ=clickedQ; G.selectedR=clickedR; updateUI(); renderMap(); return;}} if(pop>0){G.migrateSource={q:clickedQ,r:clickedR}; hint.classList.add('show'); addLog('选中 ('+clickedQ+','+clickedR+') 作为迁徙源，点击相邻格为目标。','info'); G.selectedQ=clickedQ; G.selectedR=clickedR; updateUI(); renderMap();} else {G.selectedQ=clickedQ; G.selectedR=clickedR; updateUI(); renderMap();}});
+
+    var mouseDown=false;
+    canvas.addEventListener('mousedown',function(e){mouseDown=true; Camera.isDragging=true; Camera.dragStartX=e.clientX; Camera.dragStartY=e.clientY; Camera.dragStartOffX=Camera.offsetX; Camera.dragStartOffY=Camera.offsetY; canvas.style.cursor='grabbing';});
+    document.addEventListener('mousemove',function(e){if(!mouseDown||!Camera.isDragging)return; var dx=e.clientX-Camera.dragStartX; var dy=e.clientY-Camera.dragStartY; Camera.offsetX=Camera.dragStartOffX+dx; Camera.offsetY=Camera.dragStartOffY+dy; Camera.saveUserZoom(); renderMap();});
+    document.addEventListener('mouseup',function(e){if(mouseDown&&Camera.isDragging){mouseDown=false; Camera.isDragging=false; canvas.style.cursor='grab'; Camera.saveUserZoom();}});
+    canvas.addEventListener('wheel',function(e){e.preventDefault(); var delta=e.deltaY>0?-0.18:0.18; var newZoom=Math.max(Camera.minZoom,Math.min(Camera.maxZoom,Camera.zoom+delta*Camera.zoom)); var rect=canvas.getBoundingClientRect(); var mx=e.clientX-rect.left; var my=e.clientY-rect.top; var world=Camera.screenToWorld(mx,my); Camera.zoom=newZoom; var newScreen=Camera.worldToScreen(world.x,world.y); Camera.offsetX+=mx-newScreen.x; Camera.offsetY+=my-newScreen.y; Camera.saveUserZoom(); renderMap();},{passive:false});
+
+    var lastPinchDist=0;
+    canvas.addEventListener('touchstart',function(e){if(e.touches.length===1){var touch=e.touches[0]; Camera.isDragging=true; Camera.dragStartX=touch.clientX; Camera.dragStartY=touch.clientY; Camera.dragStartOffX=Camera.offsetX; Camera.dragStartOffY=Camera.offsetY;} if(e.touches.length===2){var t1=e.touches[0],t2=e.touches[1]; lastPinchDist=Math.hypot(t1.clientX-t2.clientX,t1.clientY-t2.clientY);}},{passive:true});
+    canvas.addEventListener('touchmove',function(e){if(e.touches.length===1&&Camera.isDragging){e.preventDefault(); var touch=e.touches[0]; var dx=touch.clientX-Camera.dragStartX; var dy=touch.clientY-Camera.dragStartY; Camera.offsetX=Camera.dragStartOffX+dx; Camera.offsetY=Camera.dragStartOffY+dy; Camera.saveUserZoom(); renderMap();} if(e.touches.length===2){e.preventDefault(); var t1=e.touches[0],t2=e.touches[1]; var dist=Math.hypot(t1.clientX-t2.clientX,t1.clientY-t2.clientY); if(lastPinchDist>0){var scale=dist/lastPinchDist; var newZoom=Math.max(Camera.minZoom,Math.min(Camera.maxZoom,Camera.zoom*scale)); var rect=canvas.getBoundingClientRect(); var cx=rect.width/2,cy=rect.height/2; var world=Camera.screenToWorld(cx,cy); Camera.zoom=newZoom; var newScreen=Camera.worldToScreen(world.x,world.y); Camera.offsetX+=cx-newScreen.x; Camera.offsetY+=cy-newScreen.y; Camera.saveUserZoom(); renderMap();} lastPinchDist=dist;}},{passive:false});
+    canvas.addEventListener('touchend',function(e){if(Camera.isDragging){Camera.isDragging=false; var touch=e.changedTouches[0]; if(touch){var dx=touch.clientX-Camera.dragStartX; var dy=touch.clientY-Camera.dragStartY; if(Math.sqrt(dx*dx+dy*dy)<12){var rect=canvas.getBoundingClientRect(); var x=touch.clientX-rect.left; var y=touch.clientY-rect.top; var world=Camera.screenToWorld(x,y); var mapW=G.map.W,mapH=G.map.H; var baseSize=28; var drawSize=baseSize*Camera.zoom; var bestQ=-1,bestR=-1,bestDist=Infinity; var range=6; var centerQ=Math.round(world.x/(baseSize*Math.sqrt(3))); var centerR=Math.round(world.y/(baseSize*1.5)); for(var dq=-range;dq<=range;dq++){for(var dr=-range;dr<=range;dr++){var q=centerQ+dq; var r=centerR+dr; var pos=hexToPixel(q,r,baseSize); var dx2=world.x-pos.x; var dy2=world.y-pos.y; var dist=Math.sqrt(dx2*dx2+dy2*dy2); if(dist<bestDist){bestDist=dist; bestQ=q; bestR=r;}}} var tolerance=Math.max(drawSize*0.85,10); if(bestDist<=tolerance){var clickedQ=((bestQ%mapW)+mapW)%mapW; var clickedR=((bestR%mapH)+mapH)%mapH; var pop=G.popMgr.getCell(clickedQ,clickedR); var hint=document.getElementById('migrate-hint'); if(G.migrateSource){var src=G.migrateSource; if(src.q===clickedQ&&src.r===clickedR){G.migrateSource=null; hint.classList.remove('show'); addLog('已取消迁徙选择。','info'); G.selectedQ=clickedQ; G.selectedR=clickedR; updateUI(); renderMap(); return;} var neighbors=G.map.getNeighbors(src.q,src.r); var isNeighbor=false; for(var n of neighbors){if(n.q===clickedQ&&n.r===clickedR){isNeighbor=true; break;}} if(isNeighbor){var maxAmount=G.popMgr.getCell(src.q,src.r); if(maxAmount>0){showMigrateModal(src.q,src.r,clickedQ,clickedR,maxAmount); return;} else {G.migrateSource=null; hint.classList.remove('show'); addLog('迁徙源已无种群。','warn'); G.selectedQ=clickedQ; G.selectedR=clickedR; updateUI(); renderMap(); return;}} else {G.migrateSource=null; hint.classList.remove('show'); if(pop>0){G.migrateSource={q:clickedQ,r:clickedR}; hint.classList.add('show'); addLog('选中 ('+clickedQ+','+clickedR+') 为迁徙源','info');} else {addLog('已取消迁徙选择。','info');} G.selectedQ=clickedQ; G.selectedR=clickedR; updateUI(); renderMap(); return;}} if(pop>0){G.migrateSource={q:clickedQ,r:clickedR}; hint.classList.add('show'); addLog('选中 ('+clickedQ+','+clickedR+') 为迁徙源','info'); G.selectedQ=clickedQ; G.selectedR=clickedR; updateUI(); renderMap();} else {G.selectedQ=clickedQ; G.selectedR=clickedR; updateUI(); renderMap();}}}} Camera.saveUserZoom();} lastPinchDist=0;},{passive:true});
+
+    document.getElementById('btn-restart').addEventListener('click',function(){location.reload();});
+    document.addEventListener('keydown',function(e){if(e.key==='Enter'&&document.getElementById('menu').style.display!=='none'){var selDiff=document.querySelector('.diff-item.selected'); if(!selDiff){alert('请先选择难度！'); return;} var selRoute=document.querySelector('.route-item.selected'); if(!selRoute){alert('请先选择路线！'); return;} startGame(parseInt(selDiff.dataset.diff),selRoute.dataset.route);} if((e.key===' '||e.key==='n')&&G.map&&document.getElementById('main-area').style.display!=='none'){e.preventDefault(); performTurn();} if(e.key==='s'&&(e.ctrlKey||e.metaKey)&&G.map){e.preventDefault(); saveGame();} if(e.key==='Escape'){if(G.migrateSource){G.migrateSource=null; document.getElementById('migrate-hint').classList.remove('show'); renderMap(); addLog('已取消迁徙选择。','info');} closeDegenModal(); closeMigrateModal();}});
+
+    var resizeTimeout;
+    window.addEventListener('resize',function(){clearTimeout(resizeTimeout); resizeTimeout=setTimeout(function(){if(G.map){var container2=document.getElementById('map-container'); var rect2=container2.getBoundingClientRect(); Camera.fitToMap(G.mapW,G.mapH,rect2.width,rect2.height,true); Camera.saveUserZoom(); renderMap();}},200);});
+
+    console.log('🧬 演化之路 · 完整版已加载 (修复版)');
+    console.log('修复内容: 1.右上角重复/100  2.地块信息面板  3.迁徙后种群数字显示');
+    console.log('快捷键: 空格/n = 下回合 | Ctrl+S = 存档');
+});
+</script>
+</body>
+</html>
